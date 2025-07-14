@@ -308,25 +308,26 @@ body {
     flex: 1;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm);
-    min-height: 0;
-    overflow: hidden;
+    grid-template-rows: auto auto;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    /* Remove height restrictions for full page scroll */
 }
 
 .app-panel {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
     display: flex;
     flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
+    margin-bottom: var(--spacing-lg);
+    /* Remove height restrictions for full page scroll */
 }
 
 .app-panel .panel-content {
     flex: 1;
-    overflow-y: auto;
-    min-height: 0;
     padding: var(--spacing-md);
+    /* Remove individual panel scrolling for full page scroll */
 }
 
 /* Monitoring Panel - spans full width on bottom */
@@ -542,8 +543,7 @@ body {
 }
 
 .snapshots-list {
-    max-height: 200px;
-    overflow-y: auto;
+    /* Remove height limit for full page scroll */
 }
 
 .snapshot-item {
@@ -669,8 +669,9 @@ body {
 }
 
 .protocol-chart-container,
-.monitoring-chart-container {
-    height: 280px;
+.monitoring-chart-container,
+.realtime-chart-container {
+    height: 400px;
     margin: var(--spacing-md) 0;
     background: var(--bg-primary);
     border-radius: var(--border-radius);
@@ -691,8 +692,7 @@ body {
 }
 
 .dose-events-list {
-    max-height: 200px;
-    overflow-y: auto;
+    /* Remove height limit for full page scroll */
 }
 
 .dose-event {
@@ -779,14 +779,16 @@ body {
     .app-grid {
         grid-template-columns: 1fr;
         grid-template-rows: auto auto auto;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md);
     }
     
     .monitoring-panel {
         grid-column: 1;
     }
     
-    .app-panel .panel-content {
-        max-height: 400px;
+    .app-panel {
+        margin-bottom: var(--spacing-md);
     }
 }
 
@@ -842,8 +844,9 @@ body {
     }
     
     .protocol-chart-container,
-    .monitoring-chart-container {
-        height: 250px;
+    .monitoring-chart-container,
+    .realtime-chart-container {
+        height: 300px;
     }
 }
 
@@ -896,8 +899,9 @@ body {
     }
     
     .protocol-chart-container,
-    .monitoring-chart-container {
-        height: 400px;
+    .monitoring-chart-container,
+    .realtime-chart-container {
+        height: 350px;
     }
 }
 
