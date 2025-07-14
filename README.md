@@ -129,7 +129,7 @@ The developers assume no responsibility for any consequences arising from the us
 
 MIT License
 
-Copyright (c) 2024 Yasuyuki Suzuki
+Copyright (c) 2025 Yasuyuki Suzuki
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
