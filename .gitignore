@@ -1,0 +1,40 @@
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ログファイル
+*.log
+logs/
+
+# 一時ファイル
+tmp/
+temp/
+*.tmp
+
+# IDE設定ファイル
+.vscode/
+.idea/
+
+# Node.js関連
+node_modules/
+npm-debug.log*
+
+# PWA関連の一時ファイル
+workbox-config.js
+
+# 開発用ファイル
+*.dev.js
+*.test.js
+coverage/
+
+# 環境設定ファイル
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
