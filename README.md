@@ -6,6 +6,10 @@ This Progressive Web Application implements a Target-Controlled Infusion (TCI) s
 
 **Important Notice**: This application is designed for research and educational purposes only. It is not intended for clinical decision-making or patient care.
 
+## Quick Access
+
+**🚀 Live Application**: https://ysuzuki1978.github.io/remimazolam-tci-simulator/
+
 ## Features
 
 - **Real-time Effect-Site Concentration Prediction**: Advanced Variable-step Hybrid Algorithm (VHAC) for precise Ce calculations
