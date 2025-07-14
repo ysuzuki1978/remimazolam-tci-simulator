@@ -163,7 +163,7 @@ Affiliations:
 If you use this application in your research, please cite:
 
 ```
-Suzuki, Y. (2024). Remimazolam TCI TIVA V1.0.0: Effect-Site Concentration Prediction Application. 
+Suzuki, Y. (2025). Remimazolam TCI TIVA V1.0.0: Effect-Site Concentration Prediction Application. 
 GitHub. [URL to be provided upon publication]
 ```
 
