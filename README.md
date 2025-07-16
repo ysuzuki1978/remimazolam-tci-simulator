@@ -1,4 +1,4 @@
-# Remimazolam TCI TIVA V1.0.0: Effect-Site Concentration Prediction Application
+# Remimazolam TCI TIVA V1.1.0: Effect-Site Concentration Prediction Application
 
 ## Overview
 
@@ -18,6 +18,7 @@ This Progressive Web Application implements a Target-Controlled Infusion (TCI) s
 - **Step-Down Protocol Optimization**: Automated protocol adjustment with safety thresholds
 - **Comprehensive Monitoring**: Six-point evaluation system for protocol performance
 - **Progressive Web App**: Offline capability with responsive design
+- **🆕 Mobile-Optimized Input Interface (V1.1.0)**: Enhanced digital picker components with touch-friendly controls
 
 ## Technical Implementation
 
@@ -83,6 +84,16 @@ remimazolam_TCI_TIVA_V1_0_0/
 3. **Protocol Selection**: Choose from standard or advanced step-down protocols
 4. **Real-time Monitoring**: Monitor predicted concentrations during simulation
 5. **Performance Analysis**: Review six-point evaluation metrics
+
+### 🆕 Enhanced Input Methods (V1.1.0)
+
+The application now features mobile-optimized digital picker components for precise numerical input:
+
+- **+/- Buttons**: Single click for increment/decrement
+- **Long Press**: Hold buttons for rapid continuous changes (starts after 0.5s)
+- **Direct Keyboard Input**: Tap number fields for manual entry
+- **Touch-Friendly Design**: 44px+ touch targets optimized for mobile devices
+- **Range Validation**: Input validation occurs on focus loss, allowing natural typing
 
 ### Protocol Modes
 
@@ -175,6 +186,11 @@ GitHub. [URL to be provided upon publication]
 
 ## Version History
 
+- **V1.1.0**: Enhanced mobile-optimized input interface with digital picker components
+  - Mobile-friendly numerical input with +/- buttons and long-press support
+  - Direct keyboard input with improved validation
+  - Touch-optimized design for smartphones and tablets
+  - Improved user experience for precise dosage adjustments
 - **V1.0.0**: Public release version with enhanced protocol optimization and VHAC algorithm implementation (previously V4.3)
 - **V0.9.2**: Advanced step-down protocols with comprehensive safety features  
 - **V0.9.1**: Integration of Masui & Hagihira ke₀ regression model
@@ -182,4 +198,4 @@ GitHub. [URL to be provided upon publication]
 
 ---
 
-*Last updated: July 2024*
+*Last updated: January 2025*

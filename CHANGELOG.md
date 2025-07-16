@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-01-16
+
+### Added
+- **🆕 Digital Picker Components**: Mobile-optimized numerical input interface
+  - Enhanced +/- buttons with visual feedback and disabled states
+  - Long-press support for rapid value adjustment (0.5s delay, 0.1s intervals)
+  - Direct keyboard input with natural typing experience
+  - Touch-friendly design with 44px+ touch targets for mobile devices
+- **Improved Input Validation**: Range validation occurs on focus loss, allowing natural number entry
+- **Enhanced CSS Styling**: Complete digital picker styling with accessibility features
+  - High contrast mode support for better visibility
+  - Reduced motion support for users with motion sensitivity
+  - Mobile-responsive design adjustments
+
+### Changed
+- **Patient Information Modal**: Replaced slider inputs with digital picker components
+  - Age picker: 18-100 years (integer values)
+  - Weight picker: 30-200 kg (1 decimal place)
+  - Height picker: 120-220 cm (integer values)
+- **Induction Panel Controls**: Updated dose input interfaces
+  - Bolus dose picker: 1-15 mg (1 decimal place)
+  - Continuous infusion picker: 0-12 mg/kg/hr (2 decimal places)
+- **Dose Event Modal**: Enhanced dose input controls
+  - Administration bolus: 0-20 mg (1 decimal place)
+  - Administration continuous: 0-12 mg/kg/hr (2 decimal places)
+
+### Fixed
+- **Keyboard Input Issues**: Resolved problem where typing numbers immediately triggered range limits
+- **Event Listener Safety**: Added null safety checks to prevent errors with missing DOM elements
+- **Touch Event Handling**: Improved mobile touch responsiveness and prevented default behaviors
+
+### Technical Improvements
+- **DigitalPicker Class**: 211-line comprehensive input component with floating-point arithmetic correction
+- **Error Handling**: Enhanced try-catch blocks and safety checks throughout the application
+- **Mobile Optimization**: Improved touch targets and responsive design for smartphone usage
+
 ## [1.0.0] - 2025-07-13
 
 ### Added
