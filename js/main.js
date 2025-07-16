@@ -32,7 +32,7 @@ class MainApplicationController {
     }
 
     initialize() {
-        console.log('Initializing Remimazolam TCI TIVA V1.0.0 with Advanced Step-Down Protocol');
+        console.log('Initializing Remimazolam TCI TIVA V1.1.1 with Advanced Step-Down Protocol and Mobile-Optimized ±Button Controls');
         
         // Hide loading screen after short delay
         setTimeout(() => {
@@ -79,8 +79,13 @@ class MainApplicationController {
     }
 
     setupEventListeners() {
-        // Disclaimer modal
-        document.getElementById('acceptDisclaimer').addEventListener('click', () => {
+        // Disclaimer modal with iOS Safari fix
+        const disclaimerBtn = document.getElementById('acceptDisclaimer');
+        disclaimerBtn.addEventListener('click', () => {
+            this.hideDisclaimer();
+        });
+        disclaimerBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
             this.hideDisclaimer();
         });
         
@@ -102,7 +107,6 @@ class MainApplicationController {
         });
         
         // Patient form sliders
-        this.setupPatientFormSliders();
         
         // Induction panel
         document.getElementById('startInductionBtn').addEventListener('click', () => {
@@ -118,7 +122,8 @@ class MainApplicationController {
         });
         
         // Induction dose sliders
-        this.setupInductionSliders();
+        // Setup ±button controls (unified event delegation)
+        this.setupAdjustButtonControls();
         
         // Protocol panel
         document.getElementById('optimizeProtocolBtn').addEventListener('click', () => {
@@ -152,7 +157,6 @@ class MainApplicationController {
         });
         
         // Dose form sliders
-        this.setupDoseFormSliders();
         
         // Modal backdrop clicks
         document.querySelectorAll('.modal').forEach(modal => {
@@ -164,60 +168,143 @@ class MainApplicationController {
         });
     }
 
-    setupPatientFormSliders() {
-        const ageSlider = document.getElementById('editAge');
-        const weightSlider = document.getElementById('editWeight');
-        const heightSlider = document.getElementById('editHeight');
-        
-        ageSlider.addEventListener('input', (e) => {
-            document.getElementById('ageValue').textContent = e.target.value;
-            this.updateBMICalculation();
+
+    // ±Button Controls - Unified Event Delegation System
+    setupAdjustButtonControls() {
+        // Unified event delegation for all ±buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-adjust')) {
+                this.handleAdjustButton(e.target);
+            }
         });
-        
-        weightSlider.addEventListener('input', (e) => {
-            document.getElementById('weightValue').textContent = parseFloat(e.target.value).toFixed(1);
-            this.updateBMICalculation();
+
+        // Long-press functionality
+        document.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('btn-adjust')) {
+                this.startHold(e.target);
+            }
         });
-        
-        heightSlider.addEventListener('input', (e) => {
-            document.getElementById('heightValue').textContent = e.target.value;
-            this.updateBMICalculation();
+
+        document.addEventListener('touchstart', (e) => {
+            if (e.target.classList.contains('btn-adjust')) {
+                e.preventDefault();
+                this.startHold(e.target);
+            }
+        });
+
+        // Stop hold events
+        ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(event => {
+            document.addEventListener(event, () => {
+                this.stopHold();
+            });
+        });
+
+        // Stop hold on window blur or scroll
+        window.addEventListener('blur', () => {
+            this.stopHold();
+        });
+
+        window.addEventListener('scroll', () => {
+            this.stopHold();
         });
     }
 
-    setupInductionSliders() {
-        const bolusSlider = document.getElementById('inductionBolus');
-        const continuousSlider = document.getElementById('inductionContinuous');
+    handleAdjustButton(button) {
+        const targetId = button.getAttribute('data-target');
+        const step = parseFloat(button.getAttribute('data-step'));
+        const input = document.getElementById(targetId);
         
-        bolusSlider.addEventListener('input', (e) => {
-            const value = parseFloat(e.target.value);
-            document.getElementById('inductionBolusValue').textContent = value.toFixed(1);
-            if (this.appState.isInductionRunning) {
-                this.inductionEngine.updateDose(value, parseFloat(continuousSlider.value));
-            }
-        });
+        if (!input) return;
+
+        const isIncrement = button.classList.contains('btn-plus');
+        const currentValue = parseFloat(input.value) || 0;
+        const min = parseFloat(input.min);
+        const max = parseFloat(input.max);
         
-        continuousSlider.addEventListener('input', (e) => {
-            const value = parseFloat(e.target.value);
-            document.getElementById('inductionContinuousValue').textContent = value.toFixed(1);
-            if (this.appState.isInductionRunning) {
-                this.inductionEngine.updateDose(parseFloat(bolusSlider.value), value);
-            }
-        });
+        let newValue = isIncrement ? currentValue + step : currentValue - step;
+        
+        // Apply min/max constraints
+        if (!isNaN(min)) newValue = Math.max(min, newValue);
+        if (!isNaN(max)) newValue = Math.min(max, newValue);
+        
+        // Update input value
+        input.value = newValue;
+        
+        // Trigger change event for any listeners
+        input.dispatchEvent(new Event('change'));
+        
+        // Update specific UI elements and handle induction updates
+        this.updateUIAfterAdjustment(targetId, newValue);
     }
 
-    setupDoseFormSliders() {
-        const bolusSlider = document.getElementById('doseBolusAmount');
-        const continuousSlider = document.getElementById('doseContinuousRate');
+    updateUIAfterAdjustment(targetId, value) {
+        // Handle induction dose updates
+        if (targetId === 'inductionBolus' || targetId === 'inductionContinuous') {
+            if (this.appState.isInductionRunning) {
+                const bolusDose = parseFloat(document.getElementById('inductionBolus').value);
+                const continuousDose = parseFloat(document.getElementById('inductionContinuous').value);
+                this.inductionEngine.updateDose(bolusDose, continuousDose);
+            }
+        }
         
-        bolusSlider.addEventListener('input', (e) => {
-            document.getElementById('doseBolusValue').textContent = parseFloat(e.target.value).toFixed(1);
-        });
-        
-        continuousSlider.addEventListener('input', (e) => {
-            document.getElementById('doseContinuousValue').textContent = parseFloat(e.target.value).toFixed(2);
-        });
+        // Handle BMI calculation for patient form
+        if (targetId === 'editWeight' || targetId === 'editHeight') {
+            this.updateBMICalculation();
+        }
     }
+
+    // Long-press functionality with progressive acceleration
+    startHold(button) {
+        this.stopHold(); // Clear any existing hold
+        
+        this.holdState = {
+            button: button,
+            timeout: null,
+            interval: null,
+            accelerationFactor: 0.9,
+            currentInterval: 200
+        };
+        
+        // Add visual feedback
+        button.classList.add('holding');
+        
+        // Start continuous adjustment after 500ms delay
+        this.holdState.timeout = setTimeout(() => {
+            this.startHoldInterval(button);
+        }, 500);
+    }
+
+    startHoldInterval(button) {
+        this.holdState.interval = setInterval(() => {
+            this.handleAdjustButton(button);
+            
+            // Progressive acceleration - get faster over time
+            this.holdState.currentInterval *= this.holdState.accelerationFactor;
+            if (this.holdState.currentInterval < 50) {
+                this.holdState.currentInterval = 50; // Minimum interval
+            }
+            
+            // Restart interval with new timing
+            clearInterval(this.holdState.interval);
+            this.startHoldInterval(button);
+        }, this.holdState.currentInterval);
+    }
+
+    stopHold() {
+        if (this.holdState) {
+            if (this.holdState.timeout) {
+                clearTimeout(this.holdState.timeout);
+            }
+            if (this.holdState.interval) {
+                clearInterval(this.holdState.interval);
+            }
+            if (this.holdState.button) {
+                this.holdState.button.classList.remove('holding');
+            }
+            this.holdState = null;
+        }
+    }
+
 
     setupInductionCallbacks() {
         this.inductionEngine.addUpdateCallback((state) => {
@@ -245,9 +332,7 @@ class MainApplicationController {
         document.getElementById('editAnesthesiaStart').value = patient.formattedStartTime;
         
         // Update display values
-        document.getElementById('ageValue').textContent = patient.age;
-        document.getElementById('weightValue').textContent = patient.weight.toFixed(1);
-        document.getElementById('heightValue').textContent = patient.height;
+        // Values are now displayed directly in input fields
         this.updateBMICalculation();
         
         modal.classList.add('active');
@@ -264,8 +349,7 @@ class MainApplicationController {
         document.getElementById('doseTime').value = this.appState.patient.formattedStartTime;
         document.getElementById('doseBolusAmount').value = 0;
         document.getElementById('doseContinuousRate').value = 0;
-        document.getElementById('doseBolusValue').textContent = '0.0';
-        document.getElementById('doseContinuousValue').textContent = '0.00';
+        // Values are now displayed directly in input fields
         document.getElementById('anesthesiaStartReference').textContent = this.appState.patient.formattedStartTime;
         
         modal.classList.add('active');

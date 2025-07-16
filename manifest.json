@@ -1,8 +1,8 @@
 {
-  "name": "Remimazolam TCI TIVA V1.0.0",
-  "short_name": "RemiTCI 1.0.0",
+  "name": "Remimazolam TCI TIVA V1.1.1",
+  "short_name": "RemiTCI 1.1.1",
   "description": "Remimazolam Advanced Step-down Protocol - Effect-site Concentration Target Controlled Infusion Total Intravenous Anesthesia Management System",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "scope": "/",
   "start_url": "./index.html",
   "display": "fullscreen",

@@ -232,6 +232,16 @@ body {
     font-size: var(--font-size-base);
 }
 
+.version {
+    font-size: var(--font-size-base);
+    font-weight: 400;
+    opacity: 0.8;
+    background: rgba(255, 255, 255, 0.2);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius);
+    margin-left: var(--spacing-sm);
+}
+
 /* Panel Base Styles */
 .panel {
     background: var(--bg-panel);
@@ -314,6 +324,21 @@ body {
     /* Remove height restrictions for full page scroll */
 }
 
+/* Footer */
+.app-footer {
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    padding: var(--spacing-md) var(--spacing-xl);
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.footer-content p {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin: 0;
+}
+
 .app-panel {
     background: var(--bg-primary);
     border-radius: var(--border-radius);
@@ -370,13 +395,92 @@ body {
     box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
 }
 
-/* Range Input Styles */
-.form-group input[type="range"] {
-    width: 100%;
+/* Input Group Controls */
+.input-group-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
     margin: var(--spacing-sm) 0;
 }
 
-.slider-value,
+.input-group-controls input[type="number"] {
+    flex: 1;
+    min-width: 80px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-base);
+    text-align: center;
+    transition: border-color 0.3s ease;
+}
+
+.input-group-controls input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.btn-adjust {
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-radius: var(--border-radius);
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-adjust:hover {
+    background: var(--bg-secondary);
+    border-color: var(--primary-color);
+}
+
+.btn-adjust:active {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(0.95);
+}
+
+.btn-adjust:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--bg-secondary);
+}
+
+.btn-adjust.holding {
+    background: var(--primary-color);
+    color: white;
+    animation: pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4);
+    }
+    100% {
+        box-shadow: 0 0 0 8px rgba(33, 150, 243, 0);
+    }
+}
+
+.btn-minus {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.btn-plus {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
 .calculated-value {
     font-weight: 600;
     color: var(--primary-color);
@@ -489,10 +593,6 @@ body {
     font-weight: 500;
 }
 
-.dose-input input[type="range"] {
-    width: 100%;
-    margin: var(--spacing-sm) 0;
-}
 
 .dose-input span {
     font-weight: 600;
@@ -847,6 +947,19 @@ body {
     .monitoring-chart-container,
     .realtime-chart-container {
         height: 300px;
+    }
+    
+    /* Enhanced mobile touch support for adjust buttons */
+    .btn-adjust {
+        width: 50px;
+        height: 50px;
+        font-size: 22px;
+    }
+    
+    .input-group-controls input[type="number"] {
+        min-width: 100px;
+        padding: var(--spacing-md);
+        font-size: var(--font-size-lg);
     }
 }
 
