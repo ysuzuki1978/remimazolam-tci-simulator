@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-01-16
+
+### Added
+- **🆕 ±Button Controls**: Enhanced mobile-optimized numerical input interface
+  - Replaced all range sliders with precise ±button controls
+  - Progressive acceleration algorithm for long-press functionality (500ms delay)
+  - Visual feedback with pulse animation during long-press operations
+  - Unified event delegation system for scalable event handling
+- **iOS Safari Optimization**: Enhanced modal interaction compatibility
+  - Proper touchend event handling to prevent iOS Safari conflicts
+  - Improved modal backdrop interaction on touch devices
+- **Mobile Touch Optimization**: Accessibility-compliant touch targets
+  - 44px touch targets for desktop/tablet devices
+  - 50px touch targets for mobile devices (phones)
+  - Enhanced responsive design for various screen sizes
+
+### Changed
+- **Input Interface Migration**: Complete transition from range sliders to ±button controls
+  - Patient Information Modal: Age, Weight, Height controls with ±buttons
+  - Induction Panel: Bolus dose and continuous infusion controls
+  - Dose Event Modal: Administration dose controls
+- **Event Handling Architecture**: Unified event delegation system
+  - Single event listener delegation for all ±button controls
+  - Improved performance through reduced event listener overhead
+  - Scalable architecture for future input control additions
+
+### Fixed
+- **iOS Safari Modal Issues**: Resolved touch event conflicts in modal interactions
+- **Progressive Acceleration**: Long-press functionality with proper timing
+  - 500ms delay before activation
+  - Accelerating intervals (200ms → 50ms with 0.9 multiplier)
+  - Smooth transition between single-click and long-press modes
+- **Touch Event Handling**: Prevented default behaviors to avoid unintended interactions
+
+### Technical Improvements
+- **setupAdjustButtonControls()**: Comprehensive ±button control management
+- **Progressive Acceleration Algorithm**: Mathematical precision in timing control
+- **CSS Optimization**: Mobile-first responsive design with proper touch targets
+- **Event Delegation**: Unified system for handling all ±button interactions
+
 ## [1.1.0] - 2025-01-16
 
 ### Added
