@@ -226,10 +226,14 @@ class AdvancedProtocolEngine {
             // Calculate plasma concentration
             const plasmaConc = state.a1 / this.pkParams.v1;
             
-            // Update effect site concentration
+            // Update effect site concentration using RK4
             if (i > 0) {
-                const dCedt = this.pkParams.ke0 * (plasmaConc - currentCe);
-                currentCe = currentCe + this.settings.timeStep * dCedt;
+                currentCe = this.updateEffectSiteConcentrationRK4(
+                    plasmaConc, 
+                    currentCe, 
+                    this.pkParams.ke0, 
+                    this.settings.timeStep
+                );
             }
             
             // Advanced threshold checking and dose adjustment
@@ -408,6 +412,26 @@ class AdvancedProtocolEngine {
     }
 
     /**
+     * RK4 calculation for effect-site concentration
+     */
+    updateEffectSiteConcentrationRK4(plasmaConc, currentCe, ke0, dt) {
+        // Differential equation: dCe/dt = ke0 * (Cp - Ce)
+        const f = (ce, cp) => ke0 * (cp - ce);
+        
+        // Calculate RK4 coefficients
+        const k1 = f(currentCe, plasmaConc);
+        const k2 = f(currentCe + 0.5 * dt * k1, plasmaConc);
+        const k3 = f(currentCe + 0.5 * dt * k2, plasmaConc);
+        const k4 = f(currentCe + dt * k3, plasmaConc);
+        
+        // Calculate new effect-site concentration
+        const newCe = currentCe + (dt / 6.0) * (k1 + 2*k2 + 2*k3 + k4);
+        
+        // Non-negative constraint
+        return Math.max(0, newCe);
+    }
+
+    /**
      * Simulate bolus + continuous infusion for specific time
      */
     simulateBolusAndContinuous(bolusDoseMg, continuousRate, targetTime) {
@@ -421,9 +445,13 @@ class AdvancedProtocolEngine {
         for (let i = 0; i < numSteps; i++) {
             const plasmaConc = state.a1 / this.pkParams.v1;
             
-            // Update effect site concentration
-            const dCedt = this.pkParams.ke0 * (plasmaConc - currentCe);
-            currentCe = currentCe + this.settings.timeStep * dCedt;
+            // Update effect site concentration using RK4
+            currentCe = this.updateEffectSiteConcentrationRK4(
+                plasmaConc, 
+                currentCe, 
+                this.pkParams.ke0, 
+                this.settings.timeStep
+            );
             
             // Update system state
             state = this.updateSystemStateRK4(state, infusionRateMgMin, this.settings.timeStep);

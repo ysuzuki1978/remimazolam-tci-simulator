@@ -1,0 +1,83 @@
+# phase1-002-ke0-precision.yml
+task_id: PHASE1-002
+task_name: ke0 Numerical Calculation Precision Enhancement
+priority: HIGH
+estimated_hours: 24-32
+
+objectives:
+  - Improve Brent method convergence to 1e-15
+  - Enhanced initial guess for faster convergence
+  - Add numerical validity checks
+
+target_files:
+  - utils/masui-ke0-calculator.js
+
+implementation_details:
+  step1_enhance_brent_solver:
+    location: "BrentSolver.findRoot method"
+    modifications:
+      tolerance: 
+        current: 1e-12
+        new: 1e-15
+      max_iterations:
+        current: 100
+        new: 200
+      convergence_check: |
+        // Check both relative and absolute errors
+        const relative_error = Math.abs((b - a) / a);
+        const absolute_error = Math.abs(b - a);
+        const function_error = Math.abs(fb);
+        
+        if (relative_error < tolerance && 
+            absolute_error < tolerance && 
+            function_error < tolerance * 0.1) {
+            return b;
+        }
+
+  step2_improve_initial_guess:
+    new_function: |
+      getAnalyticalApproximation(coefficients, t_peak) {
+          const { alpha, beta, gamma, A, B, C } = coefficients;
+          
+          // Initial estimate from primary time constants
+          const weighted_avg = (A*alpha + B*beta + C*gamma) / (A + B + C);
+          
+          // Correction based on T_peak relationship
+          const correction = Math.log(t_peak) / t_peak;
+          
+          return weighted_avg * (1 + correction);
+      }
+
+  step3_add_validation:
+    validation_checks:
+      - ke0 validity range: [0.05, 0.5]
+      - Convergence history logging
+      - Fallback to alternative algorithms
+    
+    fallback_strategy: |
+      if (!this.validateKe0(ke0)) {
+          // Retry with Newton-Raphson method
+          ke0 = this.newtonRaphsonKe0(coefficients);
+          
+          if (!this.validateKe0(ke0)) {
+              // Use regression model
+              console.warn('Numerical ke0 failed, using regression');
+              return this.calculateKe0Regression(...params);
+          }
+      }
+
+testing_requirements:
+  accuracy_tests:
+    - Verify with known test cases
+    - Stability with extreme parameters
+    - Convergence speed measurements
+  
+  edge_cases:
+    - Elderly patients (>90 years)
+    - Extreme weights (<40kg, >150kg)
+    - ASA-PS 4-5 cases
+
+performance_targets:
+  - Iterations to convergence: 50% reduction
+  - Calculation precision: 15 significant digits
+  - Failure rate: <0.1%

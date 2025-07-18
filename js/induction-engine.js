@@ -136,6 +136,26 @@ class InductionEngine {
         }
     }
 
+    /**
+     * RK4 calculation for effect-site concentration
+     */
+    updateEffectSiteConcentrationRK4(plasmaConc, currentCe, ke0, dt) {
+        // Differential equation: dCe/dt = ke0 * (Cp - Ce)
+        const f = (ce, cp) => ke0 * (cp - ce);
+        
+        // Calculate RK4 coefficients
+        const k1 = f(currentCe, plasmaConc);
+        const k2 = f(currentCe + 0.5 * dt * k1, plasmaConc);
+        const k3 = f(currentCe + 0.5 * dt * k2, plasmaConc);
+        const k4 = f(currentCe + dt * k3, plasmaConc);
+        
+        // Calculate new effect-site concentration
+        const newCe = currentCe + (dt / 6.0) * (k1 + 2*k2 + 2*k3 + k4);
+        
+        // Non-negative constraint
+        return Math.max(0, newCe);
+    }
+
     updateSimulationEuler() {
         const dt = 1.0; // 1 second time step
 
@@ -156,10 +176,14 @@ class InductionEngine {
         this.state.a2 += (dt / 60.0) * da2_dt;
         this.state.a3 += (dt / 60.0) * da3_dt;
 
-        // Effect site concentration
+        // Effect site concentration using RK4
         const plasmaConc = this.getPlasmaConcentration();
-        const dce_dt = ke0 * (plasmaConc - this.state.ce);
-        this.state.ce += (dt / 60.0) * dce_dt;
+        this.state.ce = this.updateEffectSiteConcentrationRK4(
+            plasmaConc, 
+            this.state.ce, 
+            ke0, 
+            dt / 60.0  // Convert dt to minutes
+        );
 
         // Ensure non-negative values
         this.state.a1 = Math.max(0, this.state.a1);

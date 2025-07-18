@@ -1,0 +1,202 @@
+# phase1-004-comparison-framework.yml
+task_id: PHASE1-004
+task_name: Calculation Method Comparison Framework
+priority: HIGH
+estimated_hours: 16-24
+
+objectives:
+  - Run multiple calculation methods simultaneously
+  - Comparative analysis functionality
+  - Detailed CSV data export
+
+target_files:
+  - New file: js/calculation-comparator.js
+  - Modify: js/main.js (UI integration)
+  - Modify: index.html (comparison mode UI)
+
+implementation_details:
+  step1_create_comparison_engine:
+    new_class: |
+      class CalculationComparator {
+          constructor() {
+              this.methods = {
+                  euler_original: {
+                      name: "Euler Method (Current)",
+                      engine: "original",
+                      settings: { timeStep: 0.1 }
+                  },
+                  rk4_standard: {
+                      name: "RK4 Method (Standard)",
+                      engine: "rk4",
+                      settings: { timeStep: 0.1 }
+                  },
+                  rk4_fine: {
+                      name: "RK4 Method (Fine)",
+                      engine: "rk4",
+                      settings: { timeStep: 0.01 }
+                  },
+                  adaptive_rk4: {
+                      name: "Adaptive RK4",
+                      engine: "adaptive",
+                      settings: { 
+                          minStep: 0.001, 
+                          maxStep: 1.0,
+                          tolerance: 0.001
+                      }
+                  }
+              };
+              
+              this.results = new Map();
+              this.comparisonMetrics = [];
+          }
+          
+          async runComparison(patient, protocol, selectedMethods = null) {
+              const methodsToRun = selectedMethods || Object.keys(this.methods);
+              
+              for (const methodKey of methodsToRun) {
+                  const method = this.methods[methodKey];
+                  const startTime = performance.now();
+                  
+                  const result = await this.runSingleMethod(
+                      patient, 
+                      protocol, 
+                      method
+                  );
+                  
+                  const endTime = performance.now();
+                  
+                  this.results.set(methodKey, {
+                      ...result,
+                      computationTime: endTime - startTime,
+                      method: method
+                  });
+              }
+              
+              this.calculateComparisonMetrics();
+              return this.results;
+          }
+      }
+
+  step2_implement_csv_export:
+    export_functions: |
+      generateComparisonCSV() {
+          const headers = [
+              'Time(min)',
+              'Method',
+              'PlasmaConc(ug/mL)',
+              'EffectSiteConc(ug/mL)',
+              'InfusionRate(mg/min)',
+              'CumulativeDose(mg)',
+              'ComputationStep(s)',
+              'NumericalError'
+          ];
+          
+          const rows = [];
+          
+          // Collect all time point data for all methods
+          for (const [methodKey, result] of this.results) {
+              const method = this.methods[methodKey];
+              
+              result.timePoints.forEach((point, index) => {
+                  rows.push([
+                      point.time.toFixed(3),
+                      method.name,
+                      point.plasmaConc.toFixed(6),
+                      point.effectSiteConc.toFixed(6),
+                      point.infusionRate.toFixed(3),
+                      point.cumulativeDose.toFixed(3),
+                      point.timeStep?.toFixed(6) || 'N/A',
+                      this.estimateNumericalError(methodKey, index).toFixed(9)
+                  ]);
+              });
+          }
+          
+          return [headers, ...rows]
+              .map(row => row.join(','))
+              .join('
+');
+      }
+      
+      generateMetricsCSV() {
+          const headers = [
+              'Metric',
+              ...Array.from(this.results.keys())
+          ];
+          
+          const metrics = [
+              ['Computation Time (ms)', ...this.getMetric('computationTime')],
+              ['Max Plasma Conc (ug/mL)', ...this.getMetric('maxPlasmaConc')],
+              ['Max Effect-Site Conc (ug/mL)', ...this.getMetric('maxEffectSiteConc')],
+              ['Predicted Awakening Time (min)', ...this.getMetric('awakeningTime')],
+              ['Total Computation Steps', ...this.getMetric('totalSteps')],
+              ['Average Time Step (s)', ...this.getMetric('avgTimeStep')],
+              ['Estimated Error (RMS)', ...this.getMetric('estimatedError')]
+          ];
+          
+          return [headers, ...metrics]
+              .map(row => row.join(','))
+              .join('
+');
+      }
+
+  step3_ui_integration:
+    comparison_mode_ui: |
+      <!-- Add to index.html -->
+      <div class="calculation-mode-selector">
+          <h3>Calculation Mode</h3>
+          <label>
+              <input type="radio" name="calcMode" value="standard" checked>
+              Standard Calculation
+          </label>
+          <label>
+              <input type="radio" name="calcMode" value="comparison">
+              Comparison Mode
+          </label>
+      </div>
+      
+      <div id="comparison-options" style="display:none;">
+          <h4>Methods to Compare</h4>
+          <label><input type="checkbox" value="euler_original" checked> 
+              Euler Method (Current)</label>
+          <label><input type="checkbox" value="rk4_standard" checked> 
+              RK4 Method (Standard)</label>
+          <label><input type="checkbox" value="rk4_fine"> 
+              RK4 Method (Fine)</label>
+          <label><input type="checkbox" value="adaptive_rk4" checked> 
+              Adaptive RK4</label>
+          
+          <button onclick="runComparison()">Run Comparison</button>
+      </div>
+      
+      <div id="comparison-results" style="display:none;">
+          <canvas id="comparison-chart"></canvas>
+          <table id="metrics-table"></table>
+          <button onclick="downloadComparisonCSV()">
+              Download Detailed CSV
+          </button>
+          <button onclick="downloadMetricsCSV()">
+              Download Metrics CSV
+          </button>
+      </div>
+
+testing_requirements:
+  functional_tests:
+    - Independent operation of each method
+    - Comparison result consistency
+    - CSV output accuracy
+  
+  performance_tests:
+    - Memory usage with multiple methods
+    - UI responsiveness
+    - CSV generation time with large data
+
+csv_output_formats:
+  detailed_comparison:
+    - All calculation results at each time point
+    - Time step information
+    - Estimated numerical errors
+  
+  metrics_summary:
+    - Computation time comparison
+    - Clinical indicator differences
+    - Accuracy evaluation metrics

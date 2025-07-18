@@ -156,10 +156,14 @@ class EnhancedProtocolEngine {
             // Plasma concentration calculation
             const plasmaConc = Math.max(0.0, state.a1 / this.pkParams.V1);
             
-            // Effect-site concentration update
+            // Effect-site concentration update using RK4
             if (i > 0) {
-                const dCedt = this.pkParams.ke0 * (plasmaConc - currentCe);
-                currentCe = Math.max(0.0, currentCe + this.settings.timeStep * dCedt);
+                currentCe = this.updateEffectSiteConcentrationRK4(
+                    plasmaConc, 
+                    currentCe, 
+                    this.pkParams.ke0, 
+                    this.settings.timeStep
+                );
             }
             
             // Consider predictive adjustments (every 5 minutes)
@@ -272,9 +276,13 @@ class EnhancedProtocolEngine {
             // Plasma concentration
             const plasmaConc = Math.max(0.0, predictedState.a1 / this.pkParams.V1);
             
-            // Effect-site concentration update
-            const dCedt = this.pkParams.ke0 * (plasmaConc - predictedState.ce);
-            predictedState.ce = Math.max(0.0, predictedState.ce + this.settings.timeStep * dCedt);
+            // Effect-site concentration update using RK4
+            predictedState.ce = this.updateEffectSiteConcentrationRK4(
+                plasmaConc, 
+                predictedState.ce, 
+                this.pkParams.ke0, 
+                this.settings.timeStep
+            );
             
             // System state update
             const newState = this.updateSystemStateRK4(
@@ -420,6 +428,26 @@ class EnhancedProtocolEngine {
         };
     }
 
+    /**
+     * RK4 calculation for effect-site concentration
+     */
+    updateEffectSiteConcentrationRK4(plasmaConc, currentCe, ke0, dt) {
+        // Differential equation: dCe/dt = ke0 * (Cp - Ce)
+        const f = (ce, cp) => ke0 * (cp - ce);
+        
+        // Calculate RK4 coefficients
+        const k1 = f(currentCe, plasmaConc);
+        const k2 = f(currentCe + 0.5 * dt * k1, plasmaConc);
+        const k3 = f(currentCe + 0.5 * dt * k2, plasmaConc);
+        const k4 = f(currentCe + dt * k3, plasmaConc);
+        
+        // Calculate new effect-site concentration
+        const newCe = currentCe + (dt / 6.0) * (k1 + 2*k2 + 2*k3 + k4);
+        
+        // Non-negative constraint
+        return Math.max(0, newCe);
+    }
+
     // Inherit existing methods
     simulateBolusAndContinuousRK4(bolusDoseMg, continuousRate, targetTime) {
         const bolusState = this.calculateBolusInitialConcentration(bolusDoseMg);
@@ -432,8 +460,12 @@ class EnhancedProtocolEngine {
         for (let i = 0; i < numSteps; i++) {
             const plasmaConc = Math.max(0.0, state.a1 / this.pkParams.V1);
             
-            const dCedt = this.pkParams.ke0 * (plasmaConc - currentCe);
-            currentCe = Math.max(0.0, currentCe + this.settings.timeStep * dCedt);
+            currentCe = this.updateEffectSiteConcentrationRK4(
+                plasmaConc, 
+                currentCe, 
+                this.pkParams.ke0, 
+                this.settings.timeStep
+            );
             
             state = this.updateSystemStateRK4(state, infusionRateMgMin, this.settings.timeStep);
         }

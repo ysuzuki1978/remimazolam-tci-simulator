@@ -1,0 +1,108 @@
+# phase1-003-adaptive-timestep.yml
+task_id: PHASE1-003
+task_name: Adaptive Time Step Control Implementation
+priority: HIGH
+estimated_hours: 40-48
+
+objectives:
+  - High precision at clinically important time points
+  - Improved efficiency during steady states
+  - Event-driven time step control
+
+target_files:
+  - js/protocol-engine.js (base implementation)
+  - js/enhanced-protocol-engine.js (advanced)
+  - New file: js/adaptive-timestep.js
+
+implementation_details:
+  step1_create_adaptive_controller:
+    new_class: |
+      class AdaptiveTimeStepController {
+          constructor(settings) {
+              this.minStep = 0.001;  // 0.06 seconds
+              this.maxStep = 1.0;    // 1 minute
+              this.defaultStep = 0.1; // 6 seconds
+              
+              this.criticalEvents = [];
+              this.tolerances = {
+                  concentration: 0.001,  // 0.1%
+                  rate_of_change: 0.01   // 1%/min
+              };
+          }
+          
+          determineOptimalTimeStep(currentTime, state, events) {
+              // 1. Check event proximity
+              const nearEvent = this.checkEventProximity(currentTime, events);
+              
+              // 2. Calculate concentration change rate
+              const changeRate = this.calculateChangeRate(state);
+              
+              // 3. Assess clinical importance
+              const clinicalImportance = this.assessClinicalImportance(state);
+              
+              return this.computeTimeStep(nearEvent, changeRate, clinicalImportance);
+          }
+      }
+
+  step2_implement_event_detection:
+    event_types:
+      - bolus_administration:
+          detection: "dose > 0 && duration < 1"
+          pre_event_refinement: 5  # 5 seconds before
+          post_event_duration: 30  # 30 seconds high precision
+          time_step: 0.001
+      
+      - infusion_rate_change:
+          detection: "Math.abs(newRate - oldRate) > 0.1"
+          pre_event_refinement: 2
+          post_event_duration: 10
+          time_step: 0.01
+      
+      - approaching_awakening:
+          detection: "effectSiteConc < targetAwakeningConc * 1.2"
+          continuous_refinement: true
+          time_step: 0.01
+
+  step3_integrate_with_engines:
+    modification_points:
+      - Loop in simulateProtocol function
+      - Time step determination logic
+      - Post-update time step reevaluation
+    
+    integration_example: |
+      // Modify existing loop
+      let currentTime = 0;
+      const adaptiveController = new AdaptiveTimeStepController(this.settings);
+      
+      while (currentTime < duration) {
+          // Determine optimal time step
+          const dt = adaptiveController.determineOptimalTimeStep(
+              currentTime, 
+              currentState, 
+              this.events
+          );
+          
+          // Update state
+          currentState = this.updateState(currentState, dt);
+          
+          // Record with interpolation if needed
+          this.recordState(currentTime, currentState, dt);
+          
+          currentTime += dt;
+      }
+
+testing_requirements:
+  performance_tests:
+    - Computation time comparison (fixed vs adaptive)
+    - Accuracy maintenance verification
+    - Memory usage measurements
+  
+  accuracy_tests:
+    - Precision at critical time points
+    - Error accumulation in long simulations
+    - Adaptability in different scenarios
+
+expected_benefits:
+  - Computation speed: 3-5x improvement (typical cases)
+  - Memory usage: 30-50% reduction
+  - Critical point accuracy: >99.9% maintained

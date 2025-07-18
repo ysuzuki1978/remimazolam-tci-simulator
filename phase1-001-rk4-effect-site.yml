@@ -1,0 +1,98 @@
+# phase1-001-rk4-effect-site.yml
+task_id: PHASE1-001
+task_name: Effect-Site Concentration RK4 Implementation
+priority: CRITICAL
+estimated_hours: 24-32
+
+objectives:
+  - Replace Euler method with RK4 for effect-site concentration
+  - Ensure unified implementation across all engines
+  - Maintain compatibility with existing calculations
+
+target_files:
+  - js/protocol-engine.js
+  - js/enhanced-protocol-engine.js
+  - js/advanced-protocol-engine.js
+  - js/induction-engine.js
+  - js/monitoring-engine.js
+
+implementation_details:
+  step1_create_rk4_function:
+    location: "Add as new utility function"
+    code_block: |
+      // RK4 calculation for effect-site concentration
+      updateEffectSiteConcentrationRK4(plasmaConc, currentCe, ke0, dt) {
+          // Differential equation: dCe/dt = ke0 * (Cp - Ce)
+          const f = (ce, cp) => ke0 * (cp - ce);
+          
+          // Calculate RK4 coefficients
+          const k1 = f(currentCe, plasmaConc);
+          const k2 = f(currentCe + 0.5 * dt * k1, plasmaConc);
+          const k3 = f(currentCe + 0.5 * dt * k2, plasmaConc);
+          const k4 = f(currentCe + dt * k3, plasmaConc);
+          
+          // Calculate new effect-site concentration
+          const newCe = currentCe + (dt / 6.0) * (k1 + 2*k2 + 2*k3 + k4);
+          
+          // Non-negative constraint
+          return Math.max(0, newCe);
+      }
+
+  step2_replace_euler_calculations:
+    search_pattern: |
+      const dCedt = this.pkParams.ke0 * (plasmaConc - currentCe);
+      currentCe = currentCe + this.settings.timeStep * dCedt;
+    replace_with: |
+      currentCe = this.updateEffectSiteConcentrationRK4(
+          plasmaConc, 
+          currentCe, 
+          this.pkParams.ke0, 
+          this.settings.timeStep
+      );
+
+  step3_validation:
+    - Create unit tests
+    - Compare with existing Euler method
+    - Quantitative accuracy assessment
+
+testing_requirements:
+  unit_tests:
+    - Mathematical correctness of RK4
+    - Boundary conditions (Ce=0, Cp=0, ke0=0)
+    - Convergence with different time steps
+  
+  integration_tests:
+    - Verify operation in each engine
+    - Performance measurements
+    - Clinical scenario validation
+
+expected_improvements:
+  - Post-bolus tracking accuracy: 30% improvement
+  - Long-term simulation error: 50% reduction
+  - Awakening time prediction: ±3 minutes improvement
+
+comparison_support:
+  method_registration: |
+    // Register with CalculationComparator
+    class RK4EffectSiteCalculator {
+        static register(comparator) {
+            comparator.registerMethod('rk4_effect_site', {
+                name: 'RK4 Effect-Site',
+                calculator: this.calculate,
+                settings: { 
+                    timeStep: 0.1,
+                    method: 'rk4'
+                }
+            });
+        }
+        
+        static calculate(state, params, dt) {
+            // RK4 calculation logic
+            return this.updateEffectSiteConcentrationRK4(
+                state.plasmaConc,
+                state.effectSiteConc,
+                params.ke0,
+                dt
+            );
+        }
+    }
