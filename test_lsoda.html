@@ -1,0 +1,30 @@
+<\!DOCTYPE html>
+<html>
+<head>
+    <title>LSODA Test</title>
+</head>
+<body>
+    <script src="utils/lsoda.js"></script>
+    <script src="js/numerical-solvers.js"></script>
+    <script>
+        console.log('Testing LSODA integration...');
+        
+        // Test NumericalSolvers
+        try {
+            const solver = new NumericalSolvers();
+            console.log('Available methods:', solver.listMethods().map(m => m.key));
+            
+            const lsodaResult = solver.setMethod('lsoda');
+            console.log('LSODA method set:', lsodaResult);
+            console.log('Current method:', solver.getCurrentMethod());
+            
+            const methodInfo = solver.getMethodInfo('lsoda');
+            console.log('LSODA method info:', methodInfo);
+            
+        } catch (error) {
+            console.error('Error testing LSODA:', error);
+        }
+    </script>
+</body>
+</html>
+EOF < /dev/null

@@ -1,6 +1,6 @@
 {
   "name": "remimazolam-tci-simulator",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "description": "Remimazolam Advanced Step-down Protocol - Effect-site Concentration Target Controlled Infusion Total Intravenous Anesthesia Management System",
   "main": "index.html",
   "scripts": {

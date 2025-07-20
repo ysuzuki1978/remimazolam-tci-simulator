@@ -10,6 +10,15 @@
  * - Real-time adjustment recommendations
  */
 
+// Import required modules for Node.js environment
+if (typeof require !== 'undefined') {
+    const { MasuiKe0Calculator } = require('../utils/masui-ke0-calculator.js');
+    const { ProtocolResult } = require('./models.js');
+    
+    global.MasuiKe0Calculator = MasuiKe0Calculator;
+    global.ProtocolResult = ProtocolResult;
+}
+
 class AdvancedProtocolEngine {
     constructor() {
         this.patient = null;
@@ -465,6 +474,9 @@ class AdvancedProtocolEngine {
      */
     calculateBolusInitialConcentration(bolusDoseMg) {
         const initialPlasmaConc = bolusDoseMg / this.pkParams.v1;
+        console.log(`=== AdvancedProtocolEngine BOLUS DEBUG ===`);
+        console.log(`Bolus dose: ${bolusDoseMg}mg, v1: ${this.pkParams.v1}`);
+        console.log(`Initial plasma concentration: ${initialPlasmaConc}`);
         return {
             a1: bolusDoseMg,
             a2: 0.0,
@@ -479,6 +491,20 @@ class AdvancedProtocolEngine {
      */
     updateSystemStateRK4(state, infusionRateMgMin, dt) {
         const { k10, k12, k21, k13, k31 } = this.pkParams;
+        
+        // DEBUG: Log key parameters for 2-minute timepoint investigation (need currentTime param)
+        // Note: This method is called from multiple places, adding debug when state suggests ~2min
+        if (state.a1 > 0 && state.a1 < 10) { // Rough estimation for debugging
+            const plasmaConc = state.a1 / this.pkParams.v1;
+            if (plasmaConc >= 0.5 && plasmaConc <= 0.6) { // Around expected 2min concentration
+                console.log('=== AdvancedProtocolEngine DEBUG (estimated t~2min) ===');
+                console.log('v1:', this.pkParams.v1);
+                console.log('k10:', k10, 'k12:', k12, 'k21:', k21, 'k13:', k13, 'k31:', k31);
+                console.log('Current state a1:', state.a1, 'a2:', state.a2, 'a3:', state.a3);
+                console.log('Infusion rate (mg/min):', infusionRateMgMin);
+                console.log('Plasma concentration:', plasmaConc);
+            }
+        }
         
         const derivatives = (s) => ({
             da1dt: infusionRateMgMin - (k10 + k12 + k13) * s.a1 + k21 * s.a2 + k31 * s.a3,

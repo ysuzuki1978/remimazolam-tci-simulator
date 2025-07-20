@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <title>Remimazolam TCI TIVA V1.1.1 - Predictive Control Protocol Integration System</title>
+    <title>Remimazolam TCI TIVA V1.2.1 - Predictive Control Protocol Integration System</title>
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#2196F3">
@@ -14,10 +14,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Remimazolam TCI TIVA">
     
-    <!-- Icons -->
+    <!-- Icons and manifest temporarily disabled due to missing icon files
     <link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
     <link rel="icon" type="image/png" sizes="32x32" href="images/icon-32.png">
     <link rel="manifest" href="manifest.json">
+    -->
     
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
@@ -31,7 +32,7 @@
     <div id="loadingScreen" class="loading-screen">
         <div class="loading-content">
             <div class="spinner"></div>
-            <h2>Remimazolam TCI TIVA V1.1.1</h2>
+            <h2>Remimazolam TCI TIVA V1.2.1</h2>
             <p>System Initializing...</p>
         </div>
     </div>
@@ -73,7 +74,7 @@
         <!-- Header -->
         <header class="app-header">
             <div class="header-content">
-                <h1>Remimazolam TCI TIVA <span class="version">V1.1.1</span></h1>
+                <h1>Remimazolam TCI TIVA <span class="version">V1.2.1</span></h1>
                 <p>Predictive Control Protocol - Effect-site Concentration Target Controlled Infusion System</p>
             </div>
         </header>
@@ -135,6 +136,15 @@
                     </div>
                 </div>
                 <div class="panel-content">
+                    
+                    <!-- Multi-Method Real-time Comparison -->
+                    <div class="multi-method-indicator">
+                        <div class="method-status">
+                            <h4>📊 Real-time Multi-Method Comparison</h4>
+                            <p>Comparing Euler (Fast) vs RK4 (High Precision) methods simultaneously</p>
+                        </div>
+                    </div>
+
                     <div class="induction-controls">
                         <div class="dose-input">
                             <label for="inductionBolus">Bolus Dose (mg):</label>
@@ -154,17 +164,25 @@
                         </div>
                     </div>
 
-                    <div class="concentration-display">
-                        <div class="conc-item">
-                            <label>Plasma Concentration:</label>
-                            <span id="plasmaConcentration" class="concentration-value">0.000</span>
-                            <span class="unit">μg/mL</span>
+                    <!-- RK4 Method Concentration Display -->
+                    <div class="single-concentration-display">
+                        <div class="method-column rk4-column">
+                            <h4>⚡ RK4 Method (High Precision)</h4>
+                            <div class="conc-item">
+                                <label>Plasma Concentration:</label>
+                                <span id="plasmaConcentrationRK4" class="concentration-value rk4-value">0.000</span>
+                                <span class="unit">μg/mL</span>
+                            </div>
+                            <div class="conc-item">
+                                <label>Effect-site Concentration:</label>
+                                <span id="effectConcentrationRK4" class="concentration-value rk4-value">0.000</span>
+                                <span class="unit">μg/mL</span>
+                            </div>
                         </div>
-                        <div class="conc-item">
-                            <label>Effect-site Concentration (Ce):</label>
-                            <span id="effectConcentration" class="concentration-value">0.000</span>
-                            <span class="unit">μg/mL</span>
-                        </div>
+                        
+                    </div>
+
+                    <div class="time-display">
                         <div class="conc-item">
                             <label>Elapsed Time:</label>
                             <span id="elapsedTime" class="time-value">00:00:00</span>
@@ -189,6 +207,7 @@
                     <button id="optimizeProtocolBtn" class="btn btn-primary">Execute Optimization</button>
                 </div>
                 <div class="panel-content">
+
                     <div class="protocol-controls">
                         <div class="form-row">
                             <div class="input-group">
@@ -273,7 +292,10 @@
                 </div>
             </section>
 
-            <!-- App 3: Live Monitoring -->
+            <!-- App 3: Calculation Method Comparison - REMOVED -->
+            <!-- Feature removed for simplified maintenance. See DEVELOPMENT_HISTORY.md for implementation details. -->
+
+            <!-- App 4: Live Monitoring -->
             <section id="monitoringPanel" class="panel app-panel monitoring-panel">
                 <div class="panel-header">
                     <h2>📊 Actual Dose Monitoring</h2>
@@ -284,6 +306,7 @@
                     </div>
                 </div>
                 <div class="panel-content">
+
                     <div class="dose-events-section">
                         <h4>Dose Events</h4>
                         <div id="doseEventsList" class="dose-events-list"></div>
@@ -440,15 +463,20 @@
     </div>
 
     <!-- JavaScript Modules -->
-    <script src="utils/lsoda.js"></script>
     <script src="utils/masui-ke0-calculator.js"></script>
     <script src="utils/vhac.js"></script>
+    <script src="utils/lsoda.js"></script>
     <script src="js/models.js"></script>
+    <script src="js/numerical-solvers.js"></script>
+    <script src="js/pk-pd-system.js"></script>
+    <script src="js/numerical-methods-integration-test.js"></script>
     <script src="js/induction-engine.js"></script>
     <script src="js/protocol-engine.js"></script>
     <script src="js/advanced-protocol-engine.js"></script>
     <script src="js/enhanced-protocol-engine.js"></script>
     <script src="js/monitoring-engine.js"></script>
+    <script src="js/adaptive-timestep.js"></script>
+    <script src="js/calculation-comparator.js"></script>
     <script src="js/main.js"></script>
 
     <!-- Service Worker Registration -->

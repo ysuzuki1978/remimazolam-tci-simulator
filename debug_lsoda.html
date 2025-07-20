@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LSODA Debug Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .log { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+        .error { background: #ffe0e0; }
+        .success { background: #e0ffe0; }
+    </style>
+</head>
+<body>
+    <h1>LSODA Integration Debug Test</h1>
+    <div id="output"></div>
+    
+    <script src="utils/lsoda.js"></script>
+    <script src="js/models.js"></script>
+    <script src="js/numerical-solvers.js"></script>
+    <script src="js/pk-pd-system.js"></script>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, type = 'log') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = message;
+            output.appendChild(div);
+            console.log(message);
+        }
+        
+        log('=== LSODA Integration Test ===');
+        
+        // Test 1: Check if LSODA class is available
+        try {
+            if (typeof LSODA !== 'undefined') {
+                log('✓ LSODA class is available', 'success');
+                const lsoda = new LSODA();
+                log('✓ LSODA instance created successfully', 'success');
+            } else {
+                log('✗ LSODA class not found', 'error');
+            }
+        } catch (error) {
+            log(`✗ LSODA instantiation failed: ${error.message}`, 'error');
+        }
+        
+        // Test 2: Check NumericalSolvers
+        try {
+            const solver = new NumericalSolvers();
+            const methods = solver.listMethods();
+            log(`✓ Available methods: ${methods.map(m => m.key).join(', ')}`, 'success');
+            
+            const hasLSODA = methods.some(m => m.key === 'lsoda');
+            if (hasLSODA) {
+                log('✓ LSODA method found in NumericalSolvers', 'success');
+                
+                const setResult = solver.setMethod('lsoda');
+                if (setResult) {
+                    log('✓ LSODA method set successfully', 'success');
+                    log(`Current method: ${solver.getCurrentMethod()}`, 'success');
+                } else {
+                    log('✗ Failed to set LSODA method', 'error');
+                }
+            } else {
+                log('✗ LSODA method not found in NumericalSolvers', 'error');
+            }
+        } catch (error) {
+            log(`✗ NumericalSolvers test failed: ${error.message}`, 'error');
+        }
+        
+        // Test 3: Check PKPDIntegrationAdapter
+        try {
+            if (typeof PKPDIntegrationAdapter !== 'undefined') {
+                log('✓ PKPDIntegrationAdapter is available', 'success');
+                
+                // Sample PK parameters
+                const pkParams = {
+                    k10: 0.2, k12: 0.8, k21: 0.3, k13: 0.1, k31: 0.05, ke0: 0.15, V1: 15
+                };
+                
+                const adapter = new PKPDIntegrationAdapter(pkParams);
+                log('✓ PKPDIntegrationAdapter instance created', 'success');
+                
+                const lsodaSet = adapter.setMethod('lsoda');
+                if (lsodaSet) {
+                    log('✓ LSODA method set in PKPDIntegrationAdapter', 'success');
+                } else {
+                    log('✗ Failed to set LSODA in PKPDIntegrationAdapter', 'error');
+                }
+            } else {
+                log('✗ PKPDIntegrationAdapter not found', 'error');
+            }
+        } catch (error) {
+            log(`✗ PKPDIntegrationAdapter test failed: ${error.message}`, 'error');
+        }
+        
+        log('=== Test Complete ===');
+    </script>
+</body>
+</html>

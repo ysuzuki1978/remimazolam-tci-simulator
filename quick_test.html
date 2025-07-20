@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Bolus Test</title>
+</head>
+<body>
+    <h1>Quick Bolus Processing Test</h1>
+    <div id="results"></div>
+    
+    <script src="models/patient.js"></script>
+    <script src="models/dose-event.js"></script>
+    <script src="utils/masui-ke0-calculator.js"></script>
+    <script src="js/system-state.js"></script>
+    <script src="js/monitoring-engine.js"></script>
+    <script>
+        // Quick test of bolus processing
+        console.log('=== QUICK BOLUS TEST ===');
+        
+        const patient = new Patient('TEST', 50, 70, 170, SexType.MALE, AsapsType.CLASS_1_2);
+        
+        // Calculate PK parameters
+        const result = MasuiKe0Calculator.calculateKe0Complete(
+            patient.age, patient.weight, patient.height, patient.sex, patient.asaPS
+        );
+        
+        if (result.success) {
+            const pkParams = {
+                V1: result.pkParameters.V1,
+                ke0: result.ke0_numerical,
+                k10: result.rateConstants.k10,
+                k12: result.rateConstants.k12,
+                k21: result.rateConstants.k21,
+                k13: result.rateConstants.k13,
+                k31: result.rateConstants.k31
+            };
+            
+            console.log('PK Parameters:');
+            console.log('V1:', pkParams.V1);
+            console.log('ke0:', pkParams.ke0);
+            
+            // Test 1: Direct bolus calculation
+            const bolusDose = 7; // mg
+            const plasmaConc0 = bolusDose / pkParams.V1;
+            console.log('\\nDirect bolus calculation:');
+            console.log('Initial plasma concentration:', plasmaConc0.toFixed(6), 'μg/mL');
+            
+            // Test 2: After 2 minutes with no continuous infusion
+            const timeMin = 2.0;
+            const continuousRate = (1.0 * patient.weight) / 60.0; // mg/min
+            
+            // Simple exponential decay for plasma
+            const plasmaConc2min = plasmaConc0 * Math.exp(-pkParams.k10 * timeMin);
+            console.log('Plasma at 2min (exponential):', plasmaConc2min.toFixed(6), 'μg/mL');
+            
+            // Effect-site buildup (simplified)
+            const effectSite2min = plasmaConc0 * (1 - Math.exp(-pkParams.ke0 * timeMin)) * Math.exp(-pkParams.k10 * timeMin);
+            console.log('Effect-site at 2min (simplified):', effectSite2min.toFixed(6), 'μg/mL');
+            
+            // Test 3: Using MonitoringEngine with unified processing
+            const engine = new MonitoringEngine();
+            engine.setPatient(patient);
+            
+            const doseEvent = new DoseEvent(0, bolusDose, 1.0);
+            engine.addDoseEvent(doseEvent);
+            
+            const simResult = engine.runSimulation(3);
+            const point2min = simResult.timePoints.find(p => Math.abs(p.timeInMinutes - 2.0) < 0.1);
+            
+            if (point2min) {
+                console.log('\\nMonitoringEngine unified result:');
+                console.log('Plasma at 2min:', point2min.plasmaConcentration.toFixed(6), 'μg/mL');
+                console.log('Effect-site at 2min:', point2min.effectSiteConcentration.toFixed(6), 'μg/mL');
+            }
+            
+            // Display results
+            document.getElementById('results').innerHTML = `
+                <h2>Test Results</h2>
+                <p><strong>PK Parameters:</strong></p>
+                <p>V1: ${pkParams.V1.toFixed(3)} L</p>
+                <p>ke0: ${pkParams.ke0.toFixed(6)} min⁻¹</p>
+                <p></p>
+                <p><strong>Direct Calculation:</strong></p>
+                <p>Initial plasma: ${plasmaConc0.toFixed(6)} μg/mL</p>
+                <p>Plasma at 2min: ${plasmaConc2min.toFixed(6)} μg/mL</p>
+                <p>Effect-site at 2min: ${effectSite2min.toFixed(6)} μg/mL</p>
+                <p></p>
+                <p><strong>MonitoringEngine Unified:</strong></p>
+                <p>Plasma at 2min: ${point2min ? point2min.plasmaConcentration.toFixed(6) : 'N/A'} μg/mL</p>
+                <p>Effect-site at 2min: ${point2min ? point2min.effectSiteConcentration.toFixed(6) : 'N/A'} μg/mL</p>
+            `;
+        }
+    </script>
+</body>
+</html>

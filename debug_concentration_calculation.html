@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concentration Calculation Debug</title>
+</head>
+<body>
+    <h1>Real-time vs Monitoring Concentration Debug</h1>
+    <div id="results"></div>
+    
+    <script src="models/patient.js"></script>
+    <script src="models/dose-event.js"></script>
+    <script src="utils/masui-ke0-calculator.js"></script>
+    <script src="js/induction-engine.js"></script>
+    <script src="js/monitoring-engine.js"></script>
+    <script>
+        // Create the same patient as the application uses
+        const testPatient = new Patient(
+            'TEST-001',
+            50,  // age
+            70.0, // weight
+            170.0, // height
+            SexType.MALE,
+            AsapsType.CLASS_1_2,
+            new Date()
+        );
+        
+        console.log('=== Testing Real-time vs Monitoring Concentrations ===');
+        console.log('Test patient:', testPatient);
+        
+        // Test parameters (same as screenshots)
+        const bolusDose = 7; // mg
+        const continuousDose = 1.0; // mg/kg/hr
+        const testTimeMinutes = 2.0; // 2 minutes
+        
+        console.log('Test parameters:', { bolusDose, continuousDose, testTimeMinutes });
+        
+        // === REAL-TIME INDUCTION ENGINE TEST ===
+        console.log('\n=== Real-time Induction Engine ===');
+        const inductionEngine = new InductionEngine();
+        
+        // Start induction simulation
+        if (inductionEngine.start(testPatient, bolusDose, continuousDose)) {
+            console.log('Induction engine started successfully');
+            console.log('PK Parameters:', inductionEngine.pkParams);
+            
+            // Simulate for 2 minutes (120 seconds)
+            for (let i = 0; i < 120; i++) {
+                inductionEngine.updateSimulation();
+                // Sleep simulation - just increment elapsed time
+                inductionEngine.elapsedTime = i + 1;
+            }
+            
+            const inductionState = inductionEngine.getState();
+            console.log('Induction after 2 minutes:');
+            console.log('  Plasma (RK4):', inductionState.rk4.plasmaConcentration);
+            console.log('  Effect-site (RK4):', inductionState.rk4.effectSiteConcentration);
+            console.log('  Plasma (Euler):', inductionState.euler.plasmaConcentration);
+            console.log('  Effect-site (Euler):', inductionState.euler.effectSiteConcentration);
+            
+            inductionEngine.stop();
+        }
+        
+        // === MONITORING ENGINE TEST ===
+        console.log('\n=== Monitoring Engine ===');
+        const monitoringEngine = new MonitoringEngine();
+        monitoringEngine.setPatient(testPatient);
+        
+        // Create dose events for monitoring
+        const doseEvent1 = new DoseEvent(
+            0, // time = 0 minutes
+            bolusDose, // bolus
+            continuousDose, // continuous rate
+            testPatient.weight
+        );
+        
+        monitoringEngine.addDoseEvent(doseEvent1);
+        
+        // Run simulation
+        const monitoringResult = monitoringEngine.runSimulation(testTimeMinutes + 1);
+        
+        if (monitoringResult) {
+            console.log('Monitoring engine completed successfully');
+            console.log('PK Parameters:', monitoringEngine.patient.pkParams);
+            
+            // Find data point closest to 2 minutes
+            const targetTime = testTimeMinutes;
+            let closestPoint = monitoringResult.timePoints[0];
+            let minTimeDiff = Math.abs(closestPoint.timeInMinutes - targetTime);
+            
+            for (const point of monitoringResult.timePoints) {
+                const timeDiff = Math.abs(point.timeInMinutes - targetTime);
+                if (timeDiff < minTimeDiff) {
+                    minTimeDiff = timeDiff;
+                    closestPoint = point;
+                }
+            }
+            
+            console.log(`Monitoring at ${closestPoint.timeInMinutes} minutes:`);
+            console.log('  Plasma:', closestPoint.plasmaConcentration);
+            console.log('  Effect-site:', closestPoint.effectSiteConcentration);
+            console.log('  Method:', monitoringResult.calculationMethod);
+        }
+        
+        // === COMPARISON ===
+        console.log('\n=== COMPARISON ===');
+        if (inductionState && closestPoint) {
+            const inductionPlasma = inductionState.rk4.plasmaConcentration;
+            const inductionEffect = inductionState.rk4.effectSiteConcentration;
+            const monitoringPlasma = closestPoint.plasmaConcentration;
+            const monitoringEffect = closestPoint.effectSiteConcentration;
+            
+            console.log('Plasma concentration comparison:');
+            console.log(`  Induction (RK4): ${inductionPlasma.toFixed(6)} μg/mL`);
+            console.log(`  Monitoring: ${monitoringPlasma.toFixed(6)} μg/mL`);
+            console.log(`  Ratio: ${(monitoringPlasma / inductionPlasma).toFixed(3)}x`);
+            
+            console.log('Effect-site concentration comparison:');
+            console.log(`  Induction (RK4): ${inductionEffect.toFixed(6)} μg/mL`);
+            console.log(`  Monitoring: ${monitoringEffect.toFixed(6)} μg/mL`);
+            console.log(`  Ratio: ${(monitoringEffect / inductionEffect).toFixed(3)}x`);
+            
+            // Display results
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <h2>Results after ${testTimeMinutes} minutes</h2>
+                <h3>Real-time Induction Prediction</h3>
+                <p><strong>Plasma (RK4):</strong> ${inductionPlasma.toFixed(6)} μg/mL</p>
+                <p><strong>Effect-site (RK4):</strong> ${inductionEffect.toFixed(6)} μg/mL</p>
+                
+                <h3>Actual Dose Monitoring</h3>
+                <p><strong>Plasma:</strong> ${monitoringPlasma.toFixed(6)} μg/mL</p>
+                <p><strong>Effect-site:</strong> ${monitoringEffect.toFixed(6)} μg/mL</p>
+                
+                <h3>Comparison</h3>
+                <p><strong>Plasma ratio (Monitoring/Induction):</strong> ${(monitoringPlasma / inductionPlasma).toFixed(3)}x</p>
+                <p><strong>Effect-site ratio (Monitoring/Induction):</strong> ${(monitoringEffect / inductionEffect).toFixed(3)}x</p>
+                
+                <h3>PK Parameters Comparison</h3>
+                <table border="1">
+                    <tr><th>Parameter</th><th>Induction</th><th>Monitoring</th><th>Match</th></tr>
+                    <tr><td>ke0</td><td>${inductionEngine.pkParams.ke0}</td><td>${monitoringEngine.patient.pkParams.ke0}</td><td>${inductionEngine.pkParams.ke0 === monitoringEngine.patient.pkParams.ke0}</td></tr>
+                    <tr><td>V1</td><td>${inductionEngine.pkParams.V1}</td><td>${monitoringEngine.patient.pkParams.V1}</td><td>${inductionEngine.pkParams.V1 === monitoringEngine.patient.pkParams.V1}</td></tr>
+                    <tr><td>k10</td><td>${inductionEngine.pkParams.k10}</td><td>${monitoringEngine.patient.pkParams.k10}</td><td>${inductionEngine.pkParams.k10 === monitoringEngine.patient.pkParams.k10}</td></tr>
+                </table>
+            `;
+        }
+    </script>
+</body>
+</html>

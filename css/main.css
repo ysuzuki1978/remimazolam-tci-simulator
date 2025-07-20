@@ -1217,3 +1217,237 @@ body {
         transform: none;
     }
 }
+
+/* ===========================================
+   Dual Method Real-time Display Styles
+   =========================================== */
+
+/* Multi-method indicator */
+.multi-method-indicator {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+    border: 2px solid #2196f3;
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    text-align: center;
+}
+
+.method-status h4 {
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-lg);
+}
+
+.method-status p {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    margin: 0;
+}
+
+/* Dual concentration display grid */
+.dual-concentration-display {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.method-column {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    box-shadow: var(--box-shadow);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.method-column:hover {
+    box-shadow: var(--box-shadow-hover);
+    transform: translateY(-2px);
+}
+
+/* Euler method styling */
+.euler-column {
+    border-color: #ff9800;
+}
+
+.euler-column h4 {
+    color: #ff9800;
+    font-size: var(--font-size-base);
+    margin-bottom: var(--spacing-md);
+    text-align: center;
+    border-bottom: 2px solid #ff9800;
+    padding-bottom: var(--spacing-xs);
+}
+
+.euler-value {
+    color: #ff9800;
+    font-weight: bold;
+}
+
+/* RK4 method styling */
+.rk4-column {
+    border-color: #4caf50;
+}
+
+.rk4-column h4 {
+    color: #4caf50;
+    font-size: var(--font-size-base);
+    margin-bottom: var(--spacing-md);
+    text-align: center;
+    border-bottom: 2px solid #4caf50;
+    padding-bottom: var(--spacing-xs);
+}
+
+.rk4-value {
+    color: #4caf50;
+    font-weight: bold;
+}
+
+/* Difference analysis styling */
+.difference-column {
+    border-color: #9c27b0;
+}
+
+.difference-column h4 {
+    color: #9c27b0;
+    font-size: var(--font-size-base);
+    margin-bottom: var(--spacing-md);
+    text-align: center;
+    border-bottom: 2px solid #9c27b0;
+    padding-bottom: var(--spacing-xs);
+}
+
+.diff-value {
+    color: #9c27b0;
+    font-weight: bold;
+}
+
+/* Individual concentration items */
+.method-column .conc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-xs) 0;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.method-column .conc-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.method-column .conc-item label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin: 0;
+    flex: 1;
+}
+
+.method-column .concentration-value {
+    font-size: var(--font-size-lg);
+    font-weight: bold;
+    margin-right: var(--spacing-xs);
+}
+
+.method-column .unit {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+/* Time display */
+.time-display {
+    text-align: center;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.time-display .conc-item {
+    justify-content: center;
+    margin: 0;
+    border: none;
+}
+
+.time-display .time-value {
+    font-size: var(--font-size-xl);
+    font-weight: bold;
+    color: var(--primary-color);
+    margin: 0 var(--spacing-sm);
+}
+
+/* Real-time chart container adjustments */
+.realtime-chart-container {
+    margin-top: var(--spacing-lg);
+    height: 400px;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 1024px) {
+    .dual-concentration-display {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    .method-column {
+        margin-bottom: var(--spacing-sm);
+    }
+}
+
+@media (max-width: 768px) {
+    .multi-method-indicator {
+        padding: var(--spacing-sm);
+    }
+    
+    .method-status h4 {
+        font-size: var(--font-size-base);
+    }
+    
+    .method-column h4 {
+        font-size: var(--font-size-sm);
+    }
+    
+    .concentration-value {
+        font-size: var(--font-size-base) !important;
+    }
+    
+    .realtime-chart-container {
+        height: 300px;
+    }
+}
+
+/* Animation for real-time updates */
+@keyframes valueUpdate {
+    0% { background-color: rgba(33, 150, 243, 0.2); }
+    100% { background-color: transparent; }
+}
+
+.concentration-value.updating {
+    animation: valueUpdate 0.5s ease;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .method-column {
+        border-width: 3px;
+    }
+    
+    .euler-column {
+        border-color: #e65100;
+    }
+    
+    .rk4-column {
+        border-color: #2e7d32;
+    }
+    
+    .difference-column {
+        border-color: #6a1b9a;
+    }
+}

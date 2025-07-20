@@ -26,11 +26,42 @@ class EnhancedProtocolEngine {
             evaluationTimePoints: [30, 60, 90, 120, 150, 180] // Evaluation time points
         };
         this.lastResult = null;
+        this.calculationMethod = 'rk4'; // Default to RK4
+        this.pkpdAdapter = null; // PKPDIntegrationAdapter for unified calculation
     }
 
     setPatient(patient) {
         this.patient = patient;
         this.pkParams = this.calculatePKParameters(patient);
+        
+        // Initialize PKPDIntegrationAdapter
+        this.initializePKPDAdapter();
+    }
+
+    /**
+     * Set calculation method and reinitialize adapter
+     */
+    setCalculationMethod(method) {
+        this.calculationMethod = method;
+        console.log(`Enhanced protocol engine calculation method set to: ${method}`);
+        
+        if (this.pkParams) {
+            this.initializePKPDAdapter();
+        }
+    }
+
+    /**
+     * Initialize PKPDIntegrationAdapter
+     */
+    initializePKPDAdapter() {
+        try {
+            this.pkpdAdapter = new PKPDIntegrationAdapter(this.pkParams);
+            this.pkpdAdapter.setMethod(this.calculationMethod);
+            console.log(`Enhanced protocol PKPDIntegrationAdapter initialized with ${this.calculationMethod} method`);
+        } catch (error) {
+            console.error('Failed to initialize Enhanced protocol PKPDIntegrationAdapter:', error);
+            this.pkpdAdapter = null;
+        }
     }
 
     updateSettings(newSettings) {
@@ -98,7 +129,7 @@ class EnhancedProtocolEngine {
         // Optimization via binary search
         for (let iteration = 0; iteration < maxIterations; iteration++) {
             const midRate = (lowRate + highRate) / 2;
-            const ceAtTarget = this.simulateBolusAndContinuousRK4(bolusDoseMg, midRate, timeToTarget);
+            const ceAtTarget = this.simulateBolusAndContinuous(bolusDoseMg, midRate, timeToTarget);
             const error = Math.abs(ceAtTarget - targetCe);
 
             if (error < bestError) {
@@ -118,7 +149,7 @@ class EnhancedProtocolEngine {
             }
         }
 
-        const predictedCe = this.simulateBolusAndContinuousRK4(bolusDoseMg, bestRate, timeToTarget);
+        const predictedCe = this.simulateBolusAndContinuous(bolusDoseMg, bestRate, timeToTarget);
         
         console.log(`Optimal continuous rate: ${bestRate.toFixed(3)} mg/kg/hr`);
         console.log(`Predicted concentration: ${predictedCe.toFixed(4)} μg/mL`);
@@ -258,7 +289,7 @@ class EnhancedProtocolEngine {
             concentrationAtTimePoints: concentrationAtTimePoints,
             bolusDose: bolusDoseMg,
             initialContinuousRate: initialContinuousRate,
-            calculationMethod: 'Enhanced RK4 + Predictive Control'
+            calculationMethod: `Enhanced ${this.calculationMethod.toUpperCase()} + Predictive Control (PKPDIntegrationAdapter)`
         };
     }
 
@@ -448,7 +479,45 @@ class EnhancedProtocolEngine {
         return Math.max(0, newCe);
     }
 
-    // Inherit existing methods
+    // Unified incremental simulation (consistent with Real-time and Monitoring)
+    simulateBolusAndContinuous(bolusDoseMg, continuousRate, targetTime) {
+        console.log(`=== AdvancedEngine UNIFIED INCREMENTAL simulation ===`);
+        console.log(`Bolus: ${bolusDoseMg}mg, Continuous: ${continuousRate}mg/kg/hr, Target time: ${targetTime}min`);
+        
+        // Use incremental approach instead of PKPDIntegrationAdapter.simulate()
+        // Initialize state with bolus dose as initial condition (same as other systems)
+        const bolusState = this.calculateBolusInitialConcentration(bolusDoseMg);
+        let state = { a1: bolusState.a1, a2: bolusState.a2, a3: bolusState.a3 };
+        let currentCe = bolusState.effectSiteConc;
+        
+        console.log(`AdvancedEngine: Initial state after bolus: a1=${state.a1}mg, Ce=${currentCe} μg/mL`);
+        
+        const infusionRateMgMin = (continuousRate * this.patient.weight) / 60.0;
+        const timeStep = this.settings.timeStep; // Use 0.01 min for consistency
+        const numSteps = Math.floor(targetTime / timeStep);
+        
+        console.log(`AdvancedEngine: Simulation parameters: rate=${infusionRateMgMin}mg/min, steps=${numSteps}, dt=${timeStep}`);
+        
+        for (let i = 0; i < numSteps; i++) {
+            const plasmaConc = Math.max(0.0, state.a1 / this.pkParams.V1);
+            
+            // Update effect-site concentration
+            currentCe = this.updateEffectSiteConcentrationRK4(
+                plasmaConc, 
+                currentCe, 
+                this.pkParams.ke0, 
+                timeStep
+            );
+            
+            // Update system state
+            state = this.updateSystemStateRK4(state, infusionRateMgMin, timeStep);
+        }
+        
+        console.log(`AdvancedEngine at t=${targetTime}min: a1=${state.a1.toFixed(6)}mg, Ce=${currentCe.toFixed(6)} μg/mL`);
+        return currentCe;
+    }
+
+    // Fallback manual RK4 method
     simulateBolusAndContinuousRK4(bolusDoseMg, continuousRate, targetTime) {
         const bolusState = this.calculateBolusInitialConcentration(bolusDoseMg);
         let state = { a1: bolusState.a1, a2: bolusState.a2, a3: bolusState.a3 };

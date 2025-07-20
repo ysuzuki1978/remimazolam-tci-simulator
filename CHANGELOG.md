@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-01-18
+
+### Added
+- **⚖️ Calculation Method Comparison Framework**: Comprehensive numerical method analysis and benchmarking
+  - Strategy pattern implementation for multiple calculation methods comparison
+  - RK4 Standard, RK4 Fine, Adaptive RK4, and Enhanced Protocol method support
+  - Performance metrics evaluation (execution time, memory usage, accuracy)
+  - RMSE and error analysis against reference method (RK4 Fine)
+  - Interactive UI with method selection and real-time comparison charts
+  - Detailed CSV export for both time-series data and performance metrics
+  - Clinical indicators analysis (awakening time, peak concentrations)
+
+### Changed
+- **Enhanced UI**: Added new comparison panel in main application grid
+  - Method selection checkboxes with real-time comparison execution
+  - Performance metrics table with execution time, memory usage, and accuracy
+  - Chart.js integration for visual comparison of concentration profiles
+  - Dual CSV export functionality for detailed analysis and summary metrics
+
+### Added Files
+- `js/calculation-comparator.js` - Core comparison framework with Strategy pattern
+- `js/comparison-framework-tests.js` - Comprehensive test suite for comparison functionality
+
+## [1.2.1] - 2025-07-20
+
+### Fixed
+- **🔧 Critical Numerical Unification**: Resolved major calculation discrepancies between systems
+  - Fixed MonitoringEngine bolus processing from delta function to initial condition setting
+  - Corrected Real-time Induction time synchronization (real-time to simulation time)
+  - Added missing RK4/Euler methods to MonitoringEngine for unified calculation
+  - Fixed pkParams reference errors (this.pkParams → this.patient.pkParams)
+  - Unified effect-site concentration calculation across all three systems
+
+### Changed
+- **🎯 Unified RK4 Implementation**: All systems now use consistent RK4 numerical method
+  - Real-time Induction Prediction: Unified calculation with other systems
+  - Advanced Step-down Protocol Optimization: Consistent incremental approach
+  - Actual Dose Monitoring: Fixed bolus processing for numerical consistency
+  - Removed dual method complexity, standardized on RK4 for precision
+
+### Removed
+- **Simplified UI**: Eliminated unnecessary calculation method selectors
+  - Removed "Calculation Method" dropdown selections from all panels
+  - Removed "Export All Methods CSV" functionality
+  - Streamlined interface to focus on unified RK4 calculations
+
+### Technical Improvements
+- **Numerical Consistency**: All three systems now produce identical results for same conditions
+  - Unified bolus dose processing as initial condition setting
+  - Consistent incremental calculation approach across engines
+  - Fixed time synchronization for real-time simulations
+  - Standardized effect-site concentration calculations
+
+### Validation
+- **ke0 Calculation**: Confirmed proper patient-parameter-based ke0 computation
+  - MasuiKe0Calculator correctly uses age, weight, height, sex, ASA-PS
+  - Consistent ke0 values across all calculation engines
+  - Proper numerical precision maintained throughout calculations
+
 ## [1.3.0] - 2025-01-18
 
 ### Added

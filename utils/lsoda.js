@@ -97,18 +97,18 @@ class LSODA {
         const neq = y0.length;
         const ntout = t.length;
         
-        // Initialize
-        this.rtol = options.rtol || 1e-6;
-        this.atol = options.atol || 1e-12;
+        // Initialize - Very relaxed tolerances for PK models stability
+        this.rtol = options.rtol || 1e-3;  // 0.1% relative error
+        this.atol = options.atol || 1e-6;  // 1 μg/mL absolute error (clinically relevant)
         this.mxstep = options.mxstep || 500;
         
         let y = [...y0];
         const solution = [y0.slice()];
         
         this.tn = t[0];
-        // Improved initial step size calculation
+        // Very conservative initial step size for PK models
         const dt_max = Math.abs(t[1] - t[0]);
-        this.h = Math.min(dt_max * 0.1, 0.1); // More conservative initial step
+        this.h = Math.min(dt_max * 0.01, 0.01); // Extra conservative for PK stability
         this.jstart = 0;
         this.method = 1; // Start with non-stiff
         this.order = 1;
@@ -160,7 +160,7 @@ class LSODA {
      * Single integration step
      */
     step(f, y, yh, neq) {
-        const hmin = 1e-12; // More reasonable minimum step size
+        const hmin = 1e-8; // Much larger minimum step size for PK stability
         let nsteps = 0;
         const maxsteps = this.mxstep;
         
@@ -337,8 +337,8 @@ class PKLSODASolver {
                         // Integrate to bolus time
                         const partialSpan = [startTime, bolus.time];
                         const partialResult = this.lsoda.integrate(odeSystem, currentY, partialSpan, {
-                            rtol: 1e-8,
-                            atol: 1e-12
+                            rtol: 1e-4,  // Much more relaxed for PK stability
+                            atol: 1e-6   // Clinically adequate precision
                         });
                         
                         // Add results (excluding last point to avoid duplication)
@@ -360,8 +360,8 @@ class PKLSODASolver {
             if (startTime < endTime) {
                 const finalSpan = [startTime, endTime];
                 const finalResult = this.lsoda.integrate(odeSystem, currentY, finalSpan, {
-                    rtol: 1e-8,
-                    atol: 1e-12
+                    rtol: 1e-4,  // Much more relaxed for PK stability
+                    atol: 1e-6   // Clinically adequate precision
                 });
                 
                 // Add results
