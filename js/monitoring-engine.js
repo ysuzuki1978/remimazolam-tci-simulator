@@ -1,5 +1,5 @@
 /**
- * Monitoring Engine for Remimazolam TCI TIVA V1.0.0
+ * Monitoring Engine for Remimazolam TCI TIVA V1.2.1
  * Actual Dosage Monitoring Engine
  * 
  * Features:
@@ -193,7 +193,7 @@ class MonitoringEngine {
             timePoints,
             this.patient,
             this.doseEvents,
-            this.calculationMethod + " (V1.0.0)",
+            this.calculationMethod + " (V1.2.1)",
             new Date(),
             plasmaResult.concentrations,
             effectSiteConcentrations,
