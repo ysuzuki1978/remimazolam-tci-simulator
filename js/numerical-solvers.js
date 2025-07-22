@@ -1,5 +1,5 @@
 /**
- * Unified Numerical Solvers for Remimazolam TCI TIVA V1.0.0
+ * Unified Numerical Solvers for Remimazolam TCI TIVA V1.2.1
  * Implements multiple numerical methods for PK/PD model solving
  * 
  * Features:
