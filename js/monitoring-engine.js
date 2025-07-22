@@ -241,84 +241,107 @@ class MonitoringEngine {
 
     /**
      * Calculate plasma concentrations using selected numerical method
+     * FIXED: Unified with propofol implementation to handle multiple dose events properly
      */
     calculatePlasmaConcentrationsWithMethod(times) {
-        // Extract simple method name from calculation method string, defaulting to RK4 for precision
-        let selectedMethod = 'rk4';
-        if (this.calculationMethod) {
-            const methodLower = this.calculationMethod.toLowerCase();
-            if (methodLower.includes('euler')) {
-                selectedMethod = 'euler';
-            } else if (methodLower.includes('rk4')) {
-                selectedMethod = 'rk4';
+        const timeStep = times.length > 1 ? times[1] - times[0] : this.precision;
+        
+        // Initialize state with t=0 bolus as initial condition (unified bolus processing)
+        let initialBolus = 0;
+        const bolusEvents = [];
+        const infusionEvents = [];
+        
+        for (const event of this.doseEvents) {
+            const eventTime = event.timeInMinutes;
+            
+            if (event.bolusMg > 0) {
+                if (eventTime === 0) {
+                    // t=0 bolus becomes initial condition
+                    initialBolus += event.bolusMg;
+                } else {
+                    // Non-zero time bolus events
+                    bolusEvents.push({ time: eventTime, dose: event.bolusMg });
+                }
+            }
+            
+            // Add infusion rate changes (including rate = 0 for stopping infusion)
+            const newRate = event.continuousMgKgHr;
+            if (infusionEvents.length === 0 || 
+                newRate !== infusionEvents[infusionEvents.length - 1].rate) {
+                infusionEvents.push({ time: eventTime, rate: newRate });
             }
         }
         
-        console.log(`=== MonitoringEngine UNIFIED INCREMENTAL Path ===`);
-        console.log(`Using ${selectedMethod.toUpperCase()} integration with initial condition bolus processing`);
-        console.log(`Dose events:`, this.doseEvents.map(e => ({ time: e.timeInMinutes, bolus: e.bolusMg, continuous: e.continuousMgKgHr })));
+        // Sort events
+        bolusEvents.sort((a, b) => a.time - b.time);
+        infusionEvents.sort((a, b) => a.time - b.time);
+        
+        // Add initial zero infusion if needed
+        if (infusionEvents.length === 0 || infusionEvents[0].time > 0) {
+            infusionEvents.unshift({ time: 0.0, rate: 0.0 });
+        }
+        
+        console.log(`=== MonitoringEngine FIXED UNIFIED Path ===`);
+        console.log(`Initial bolus dose: ${initialBolus}mg`);
+        console.log(`Bolus events to process:`, bolusEvents);
+        console.log(`Infusion events to process:`, infusionEvents);
         console.log(`Patient weight: ${this.patient.weight}kg, V1: ${this.patient.pkParams.V1}`);
         
-        // FIXED: Use incremental approach instead of PKPDIntegrationAdapter.simulate()
-        // Initialize state with bolus dose as initial condition (like Real-time/Advanced systems)
-        let state = new SystemState();
+        // Initialize state with t=0 bolus as initial condition
+        let state = new SystemState(initialBolus, 0, 0);
+        const plasmaConcentrations = [];
         
-        // Apply bolus dose at t=0 as initial condition
-        const initialBolus = this.doseEvents.find(e => e.timeInMinutes === 0 && e.bolusMg > 0);
-        if (initialBolus) {
-            state.a1 = initialBolus.bolusMg; // Set initial amount in central compartment
-            console.log(`MonitoringEngine: Applied bolus as initial condition: a1=${state.a1}mg`);
-        }
+        let bolusIndex = 0;
+        let infusionIndex = 0;
+        let currentInfusionRate = 0.0;
         
-        // Find continuous rate from dose events
-        let continuousRate = 0; // mg/min
-        const continuousEvent = this.doseEvents.find(e => e.timeInMinutes === 0 && e.continuousMgKgHr > 0);
-        if (continuousEvent) {
-            continuousRate = (continuousEvent.continuousMgKgHr * this.patient.weight) / 60.0; // mg/kg/hr to mg/min
-        }
-        
-        console.log(`MonitoringEngine: Continuous infusion rate: ${continuousRate} mg/min`);
-        
-        const concentrations = [];
-        const timeStep = 0.01; // Use same timestep as other systems
-        
-        for (let i = 0; i < times.length; i++) {
-            const targetTime = times[i];
+        for (let index = 0; index < times.length; index++) {
+            const currentTime = times[index];
             
-            // Integrate from previous time to current time using small timesteps
-            let currentTime = i > 0 ? times[i-1] : 0;
-            
-            while (currentTime < targetTime) {
-                const dt = Math.min(timeStep, targetTime - currentTime);
-                
-                // Use RK4 integration for consistency
-                if (selectedMethod === 'rk4') {
-                    state = this.updateSystemStateRK4(state, continuousRate, dt);
-                } else {
-                    state = this.updateSystemStateEuler(state, continuousRate, dt);
+            // Apply bolus doses - exclude t=0 boluses (already in initial condition)
+            while (bolusIndex < bolusEvents.length && 
+                   Math.abs(bolusEvents[bolusIndex].time - currentTime) < timeStep / 2) {
+                if (bolusEvents[bolusIndex].time > 0) { // Only apply non-zero time boluses
+                    state.a1 += bolusEvents[bolusIndex].dose;
+                    console.log(`Applied bolus: ${bolusEvents[bolusIndex].dose}mg at time ${currentTime}`);
                 }
-                
-                currentTime += dt;
+                bolusIndex++;
             }
             
-            const plasmaConcentration = state.a1 / this.patient.pkParams.V1;
-            concentrations.push(plasmaConcentration);
+            // Update infusion rate - handle rate changes including stopping (rate=0)
+            while (infusionIndex < infusionEvents.length && 
+                   currentTime >= infusionEvents[infusionIndex].time) {
+                currentInfusionRate = infusionEvents[infusionIndex].rate;
+                console.log(`Updated infusion rate to ${currentInfusionRate} mg/kg/hr at time ${currentTime}`);
+                infusionIndex++;
+            }
+            
+            // Calculate plasma concentration
+            const plasmaConc = Math.max(0.0, state.a1 / this.patient.pkParams.V1);
+            plasmaConcentrations.push(plasmaConc);
             
             // Debug logging for key timepoints
-            if (Math.abs(targetTime - 2.0) < 0.01) {
-                console.log(`MonitoringEngine at t=${targetTime}min: a1=${state.a1.toFixed(6)}mg, plasma=${plasmaConcentration.toFixed(6)} μg/mL`);
+            if (Math.abs(currentTime - 2.0) < 0.01 || Math.abs(currentTime - 60.0) < 0.01) {
+                console.log(`MonitoringEngine at t=${currentTime}min: a1=${state.a1.toFixed(6)}mg, plasma=${plasmaConc.toFixed(6)} μg/mL, infusion rate=${currentInfusionRate} mg/kg/hr`);
+            }
+            
+            // Update state for next time step using RK4
+            if (index < times.length - 1) {
+                const infusionRateMgMin = (currentInfusionRate * this.patient.weight) / 60.0;
+                state = this.updateSystemStateRK4(state, infusionRateMgMin, timeStep);
             }
         }
         
-        console.log(`MonitoringEngine unified result: ${concentrations.length} data points`);
-        console.log(`Sample concentrations:`, concentrations.slice(0, 3).map((c, i) => ({ 
+        console.log(`MonitoringEngine unified result: ${plasmaConcentrations.length} data points`);
+        console.log(`Sample concentrations:`, plasmaConcentrations.slice(0, 3).map((c, i) => ({ 
             time: times[i], 
             plasma: c.toFixed(6)
         })));
+        console.log(`Final concentration: ${plasmaConcentrations[plasmaConcentrations.length - 1].toFixed(6)} μg/mL`);
         
         return {
-            concentrations: concentrations,
-            method: selectedMethod.toUpperCase()
+            concentrations: plasmaConcentrations,
+            method: 'RK4'
         };
     }
 
