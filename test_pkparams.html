@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PK Params Test</title>
+</head>
+<body>
+    <h1>PK Parameters Test</h1>
+    <div id="output"></div>
+    
+    <script src="utils/masui-ke0-calculator.js"></script>
+    <script src="js/models.js"></script>
+    <script src="js/monitoring-engine.js"></script>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            output.innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+        
+        try {
+            log('Testing PK parameters initialization...');
+            
+            // Create a test patient
+            const testPatient = new Patient(
+                'TEST-001',
+                50,
+                70.0,
+                170.0,
+                SexType.MALE,
+                AsapsType.CLASS_1_2,
+                new Date()
+            );
+            
+            log('Patient created: ' + testPatient.id);
+            
+            // Calculate PK parameters
+            const result = MasuiKe0Calculator.calculateKe0Complete(
+                testPatient.age,
+                testPatient.weight,
+                testPatient.height,
+                testPatient.sex,
+                testPatient.asaPS
+            );
+            
+            if (result.success) {
+                testPatient.pkParams = {
+                    V1: result.pkParameters.V1,
+                    V2: result.pkParameters.V2,
+                    V3: result.pkParameters.V3,
+                    CL: result.pkParameters.CL,
+                    Q2: result.pkParameters.Q2,
+                    Q3: result.pkParameters.Q3,
+                    ke0: result.ke0_numerical || result.ke0_regression,
+                    k10: result.rateConstants.k10,
+                    k12: result.rateConstants.k12,
+                    k21: result.rateConstants.k21,
+                    k13: result.rateConstants.k13,
+                    k31: result.rateConstants.k31
+                };
+                
+                log('PK parameters calculated successfully');
+                log('k10: ' + testPatient.pkParams.k10);
+                log('k12: ' + testPatient.pkParams.k12);
+                log('V1: ' + testPatient.pkParams.V1);
+                
+                // Test monitoring engine
+                const monitoringEngine = new MonitoringEngine();
+                monitoringEngine.setPatient(testPatient);
+                
+                log('Monitoring engine patient PK params available: ' + 
+                    (monitoringEngine.patient.pkParams ? 'YES' : 'NO'));
+                
+                if (monitoringEngine.patient.pkParams) {
+                    log('Monitoring engine k10: ' + monitoringEngine.patient.pkParams.k10);
+                }
+                
+                log('✅ Test PASSED: PK parameters working correctly');
+                
+            } else {
+                log('❌ Test FAILED: ' + result.error);
+            }
+            
+        } catch (error) {
+            log('❌ Test ERROR: ' + error.message);
+            log('Stack: ' + error.stack);
+        }
+    </script>
+</body>
+</html>

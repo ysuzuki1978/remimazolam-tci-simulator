@@ -1,4 +1,4 @@
-# Remimazolam TCI TIVA V1.1.0: Effect-Site Concentration Prediction Application
+# Remimazolam TCI TIVA V1.2.1: Effect-Site Concentration Prediction Application
 
 ## Overview
 
@@ -18,7 +18,7 @@ This Progressive Web Application implements a Target-Controlled Infusion (TCI) s
 - **Step-Down Protocol Optimization**: Automated protocol adjustment with safety thresholds
 - **Comprehensive Monitoring**: Six-point evaluation system for protocol performance
 - **Progressive Web App**: Offline capability with responsive design
-- **🆕 Mobile-Optimized Input Interface (V1.1.0)**: Enhanced digital picker components with touch-friendly controls
+- **🔧 Unified RK4 Calculations (V1.2.1)**: Standardized numerical methods across all calculation engines for consistent results
 
 ## Technical Implementation
 
@@ -32,9 +32,10 @@ The application implements two validated models with 100% parameter accuracy:
 
 ### Computational Algorithms
 
-- **Numerical Integration**: Fourth-order Runge-Kutta (RK4) with adaptive time stepping
+- **Unified Numerical Integration**: Standardized Fourth-order Runge-Kutta (RK4) across all calculation engines
+- **Consistent Bolus Processing**: Unified initial condition setting approach for all systems
 - **Optimization Methods**: Binary search and grid search algorithms for TCI calculations
-- **Effect-Site Modeling**: VHAC algorithm with three analytical scenarios for enhanced precision
+- **Effect-Site Modeling**: Standardized effect-site calculation across Real-time, Advanced, and Monitoring systems
 - **Safety Protocols**: Conservative step-down logic with configurable thresholds
 
 ## System Requirements
@@ -85,15 +86,15 @@ remimazolam_TCI_TIVA_V1_0_0/
 4. **Real-time Monitoring**: Monitor predicted concentrations during simulation
 5. **Performance Analysis**: Review six-point evaluation metrics
 
-### 🆕 Enhanced Input Methods (V1.1.0)
+### 🆕 Enhanced ±Button Controls (V1.1.1)
 
-The application now features mobile-optimized digital picker components for precise numerical input:
+The application now features mobile-optimized ±button interface for precise numerical input:
 
-- **+/- Buttons**: Single click for increment/decrement
-- **Long Press**: Hold buttons for rapid continuous changes (starts after 0.5s)
-- **Direct Keyboard Input**: Tap number fields for manual entry
-- **Touch-Friendly Design**: 44px+ touch targets optimized for mobile devices
-- **Range Validation**: Input validation occurs on focus loss, allowing natural typing
+- **±Button Controls**: Single click for precise increment/decrement operations
+- **Progressive Acceleration**: Long press for rapid continuous changes (500ms delay, accelerating intervals)
+- **iOS Safari Optimization**: Enhanced modal interaction with proper touch event handling
+- **Mobile Touch Targets**: 44px/50px touch targets meeting accessibility standards
+- **Unified Event Delegation**: Scalable event handling system for optimal performance
 
 ### Protocol Modes
 
@@ -174,7 +175,7 @@ Affiliations:
 If you use this application in your research, please cite:
 
 ```
-Suzuki, Y. (2025). Remimazolam TCI TIVA V1.0.0: Effect-Site Concentration Prediction Application. 
+Suzuki, Y. (2025). Remimazolam TCI TIVA V1.1.1: Effect-Site Concentration Prediction Application. 
 GitHub. [URL to be provided upon publication]
 ```
 
@@ -186,6 +187,12 @@ GitHub. [URL to be provided upon publication]
 
 ## Version History
 
+- **V1.1.1**: Enhanced mobile-optimized ±button controls with progressive acceleration
+  - Replaced all range sliders with precise ±button controls
+  - Progressive acceleration algorithm with long-press functionality (500ms delay)
+  - iOS Safari modal interaction fixes with proper touch event handling
+  - Mobile touch optimization (44px/50px targets) for accessibility compliance
+  - Unified event delegation system for scalable performance
 - **V1.1.0**: Enhanced mobile-optimized input interface with digital picker components
   - Mobile-friendly numerical input with +/- buttons and long-press support
   - Direct keyboard input with improved validation

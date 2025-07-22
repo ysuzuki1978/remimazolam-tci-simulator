@@ -128,19 +128,25 @@ class ProtocolEngine {
     }
 
     /**
-     * Generate complete protocol schedule with step-down adjustments using LSODA
+     * Generate complete protocol schedule with step-down adjustments
      */
-    generateCompleteProtocol(bolusDoseMg, initialContinuousRate) {
+    generateCompleteProtocol(bolusDoseMg, initialContinuousRate, useAdaptive = false) {
         if (!this.patient || !this.pkParams) {
             throw new Error('Patient and PK parameters must be set before protocol generation');
         }
 
         console.log(`=== Complete Protocol Generation ===`);
         
-        // Always use RK4 for now due to LSODA stability issues
-        // TODO: Fix LSODA implementation in future version
-        console.log('Using RK4 integration for protocol generation');
-        return this.generateCompleteProtocolRK4(bolusDoseMg, initialContinuousRate);
+        // Choose integration method
+        if (useAdaptive && typeof AdaptiveTimeStepController !== 'undefined') {
+            console.log('Using adaptive time step RK4 integration');
+            return this.generateCompleteProtocolAdaptive(bolusDoseMg, initialContinuousRate);
+        } else {
+            // Always use RK4 for now due to LSODA stability issues
+            // TODO: Fix LSODA implementation in future version
+            console.log('Using fixed step RK4 integration');
+            return this.generateCompleteProtocolRK4(bolusDoseMg, initialContinuousRate);
+        }
         
         // LSODA implementation commented out temporarily
         /*
@@ -292,6 +298,185 @@ class ProtocolEngine {
     }
 
     /**
+     * Generate complete protocol using adaptive time step RK4
+     */
+    generateCompleteProtocolAdaptive(bolusDoseMg, initialContinuousRate) {
+        if (!this.patient || !this.pkParams) {
+            throw new Error('Patient and PK parameters must be set before protocol generation');
+        }
+        
+        console.log('=== Adaptive Time Step Protocol Generation ===');
+        
+        // Check if adaptive timestep is available
+        if (typeof AdaptiveTimeStepController === 'undefined') {
+            console.warn('AdaptiveTimeStepController not available, falling back to fixed step RK4');
+            return this.generateCompleteProtocolRK4(bolusDoseMg, initialContinuousRate);
+        }
+        
+        // Create adaptive controller
+        const adaptiveController = new AdaptiveTimeStepController({
+            minStep: 0.001,
+            maxStep: 1.0,
+            defaultStep: this.settings.timeStep,
+            concentrationTolerance: 0.001,
+            safetyFactor: 0.9
+        });
+        
+        // Create solver
+        const adaptiveSolver = new AdaptiveTimeStepSolver(adaptiveController);
+        
+        // Prepare initial state
+        const bolusState = this.calculateBolusInitialConcentration(bolusDoseMg);
+        const initialState = {
+            a1: bolusState.a1,
+            a2: bolusState.a2,
+            a3: bolusState.a3,
+            plasmaConc: bolusState.plasmaConc,
+            effectSiteConc: bolusState.effectSiteConc,
+            infusionRate: initialContinuousRate,
+            upperThreshold: this.settings.targetCe * this.settings.upperThreshold,
+            targetCe: this.settings.targetCe
+        };
+        
+        // Prepare events
+        const events = [
+            { time: 0, type: 'bolus', dose: bolusDoseMg, V1: this.pkParams.v1 }
+        ];
+        
+        // Create update function
+        const updateFunction = (state, dt) => {
+            return this.updateStateAdaptive(state, dt);
+        };
+        
+        // Run adaptive simulation
+        const result = adaptiveSolver.solve(
+            initialState,
+            events,
+            this.settings.simulationDuration,
+            updateFunction,
+            this.settings.timeStep
+        );
+        
+        // Process results
+        const timeSeriesData = [];
+        const dosageAdjustments = [];
+        let lastAdjustmentTime = -5;
+        let adjustmentCount = 0;
+        
+        for (const dataPoint of result.results) {
+            const currentTime = dataPoint.time;
+            const state = dataPoint.state;
+            
+            // Check threshold and adjust dosage
+            if (state.effectSiteConc >= state.upperThreshold && 
+                currentTime - lastAdjustmentTime >= this.settings.adjustmentInterval && 
+                state.infusionRate > 0.1) {
+                
+                const oldRate = state.infusionRate;
+                const newRate = Math.max(0.1, oldRate * this.settings.reductionFactor);
+                
+                // Update state for future points
+                state.infusionRate = newRate;
+                
+                dosageAdjustments.push({
+                    time: currentTime,
+                    type: 'threshold_reduction',
+                    oldRate: oldRate,
+                    newRate: newRate,
+                    ceAtEvent: state.effectSiteConc,
+                    adjustmentNumber: ++adjustmentCount
+                });
+                
+                lastAdjustmentTime = currentTime;
+                console.log(`${currentTime.toFixed(1)}min: Adaptive threshold reached Ce=${state.effectSiteConc.toFixed(3)} → Rate ${oldRate.toFixed(2)} → ${newRate.toFixed(2)} mg/kg/hr`);
+            }
+            
+            // Record data
+            timeSeriesData.push({
+                time: parseFloat(currentTime.toFixed(1)),
+                ce: state.effectSiteConc,
+                plasma: state.plasmaConc,
+                infusionRate: state.infusionRate,
+                targetCe: state.targetCe,
+                upperThreshold: state.upperThreshold,
+                adjustmentNumber: adjustmentCount,
+                isBolus: currentTime === 0,
+                adaptiveStep: dataPoint.timeStep,
+                interpolated: dataPoint.interpolated || false
+            });
+        }
+        
+        // Evaluate performance
+        const performance = this.evaluateProtocolPerformance(timeSeriesData, dosageAdjustments);
+        
+        // Add adaptive-specific metrics
+        const adaptiveStats = result.stats;
+        performance.adaptiveStats = {
+            totalSteps: adaptiveStats.totalSteps,
+            acceptedSteps: adaptiveStats.acceptedSteps,
+            rejectedSteps: adaptiveStats.rejectedSteps,
+            acceptanceRate: adaptiveStats.acceptanceRate,
+            efficiencyRatio: adaptiveStats.efficiencyRatio,
+            interpolationCount: adaptiveStats.interpolationCount,
+            computationalSavings: ((timeSeriesData.length - adaptiveStats.acceptedSteps) / timeSeriesData.length) * 100
+        };
+        
+        console.log("");
+        console.log("=== Adaptive Performance Evaluation ===");
+        console.log(`Final effect site concentration: ${performance.finalCe.toFixed(3)} μg/mL`);
+        console.log(`Average deviation: ${performance.avgDeviation.toFixed(4)} μg/mL`);
+        console.log(`Target accuracy: ${performance.targetAccuracy.toFixed(1)}%`);
+        console.log(`Total adjustments: ${performance.totalAdjustments}`);
+        console.log(`Adaptive steps: ${adaptiveStats.acceptedSteps} (${adaptiveStats.acceptanceRate.toFixed(1)}% acceptance)`);
+        console.log(`Computational savings: ${performance.adaptiveStats.computationalSavings.toFixed(1)}%`);
+        
+        return {
+            timeSeriesData: timeSeriesData,
+            dosageAdjustments: dosageAdjustments,
+            performance: performance,
+            bolusDose: bolusDoseMg,
+            initialContinuousRate: initialContinuousRate,
+            calculationMethod: 'Adaptive RK4'
+        };
+    }
+
+    /**
+     * Update state for adaptive time stepping
+     */
+    updateStateAdaptive(state, dt) {
+        const infusionRateMgMin = (state.infusionRate * this.patient.weight) / 60.0;
+        
+        // Update compartment amounts using RK4
+        const newCompartmentState = this.updateSystemStateRK4(
+            { a1: state.a1, a2: state.a2, a3: state.a3 },
+            infusionRateMgMin,
+            dt
+        );
+        
+        // Calculate plasma concentration
+        const plasmaConc = newCompartmentState.a1 / this.pkParams.v1;
+        
+        // Update effect site concentration using RK4
+        const newCe = this.updateEffectSiteConcentrationRK4(
+            plasmaConc,
+            state.effectSiteConc,
+            this.pkParams.ke0,
+            dt
+        );
+        
+        return {
+            a1: newCompartmentState.a1,
+            a2: newCompartmentState.a2,
+            a3: newCompartmentState.a3,
+            plasmaConc: plasmaConc,
+            effectSiteConc: newCe,
+            infusionRate: state.infusionRate,
+            upperThreshold: state.upperThreshold,
+            targetCe: state.targetCe
+        };
+    }
+
+    /**
      * Generate complete protocol using RK4 (fallback method)
      */
     generateCompleteProtocolRK4(bolusDoseMg, initialContinuousRate) {
@@ -314,10 +499,14 @@ class ProtocolEngine {
             // Calculate plasma concentration
             const plasmaConc = state.a1 / this.pkParams.v1;
             
-            // Update effect site concentration
+            // Update effect site concentration using RK4
             if (i > 0) {
-                const dCedt = this.pkParams.ke0 * (plasmaConc - currentCe);
-                currentCe = currentCe + this.settings.timeStep * dCedt;
+                currentCe = this.updateEffectSiteConcentrationRK4(
+                    plasmaConc, 
+                    currentCe, 
+                    this.pkParams.ke0, 
+                    this.settings.timeStep
+                );
             }
             
             // Check threshold and adjust dosage
@@ -463,9 +652,13 @@ class ProtocolEngine {
         for (let i = 0; i < numSteps; i++) {
             const plasmaConc = state.a1 / this.pkParams.v1;
             
-            // Update effect site concentration
-            const dCedt = this.pkParams.ke0 * (plasmaConc - currentCe);
-            currentCe = currentCe + this.settings.timeStep * dCedt;
+            // Update effect site concentration using RK4
+            currentCe = this.updateEffectSiteConcentrationRK4(
+                plasmaConc, 
+                currentCe, 
+                this.pkParams.ke0, 
+                this.settings.timeStep
+            );
             
             // Update system state
             state = this.updateSystemStateRK4(state, infusionRateMgMin, this.settings.timeStep);
@@ -487,6 +680,26 @@ class ProtocolEngine {
             plasmaConc: initialPlasmaConc, // μg/mL
             effectSiteConc: 0.0 // Effect site takes time to reach equilibrium
         };
+    }
+
+    /**
+     * RK4 calculation for effect-site concentration
+     */
+    updateEffectSiteConcentrationRK4(plasmaConc, currentCe, ke0, dt) {
+        // Differential equation: dCe/dt = ke0 * (Cp - Ce)
+        const f = (ce, cp) => ke0 * (cp - ce);
+        
+        // Calculate RK4 coefficients
+        const k1 = f(currentCe, plasmaConc);
+        const k2 = f(currentCe + 0.5 * dt * k1, plasmaConc);
+        const k3 = f(currentCe + 0.5 * dt * k2, plasmaConc);
+        const k4 = f(currentCe + dt * k3, plasmaConc);
+        
+        // Calculate new effect-site concentration
+        const newCe = currentCe + (dt / 6.0) * (k1 + 2*k2 + 2*k3 + k4);
+        
+        // Non-negative constraint
+        return Math.max(0, newCe);
     }
 
     /**

@@ -87,10 +87,10 @@ class CubicSolver {
 }
 
 /**
- * 数値的根探索（ブレント法）
+ * 数値的根探索（ブレント法）- 高精度版
  */
 class BrentSolver {
-    static findRoot(func, a, b, tolerance = 1e-12, maxIterations = 100) {
+    static findRoot(func, a, b, tolerance = 1e-15, maxIterations = 200) {
         let fa = func(a);
         let fb = func(b);
         
@@ -109,7 +109,17 @@ class BrentSolver {
         let d = 0;
         
         for (let iter = 0; iter < maxIterations; iter++) {
-            if (Math.abs(b - a) < tolerance) {
+            // Enhanced convergence check (relative + absolute + function error)
+            const relative_error = Math.abs((b - a) / Math.max(Math.abs(a), Math.abs(b)));
+            const absolute_error = Math.abs(b - a);
+            const function_error = Math.abs(fb);
+            const tolerance_adaptive = tolerance * Math.max(1, Math.abs(b)) + tolerance;
+            
+            if (relative_error < tolerance && 
+                absolute_error < tolerance_adaptive && 
+                function_error < tolerance * 0.1) {
+                console.log(`Brent method converged in ${iter + 1} iterations`);
+                console.log(`Final precision: rel_err=${relative_error.toExponential(3)}, abs_err=${absolute_error.toExponential(3)}, func_err=${function_error.toExponential(3)}`);
                 return b;
             }
             
@@ -129,8 +139,8 @@ class BrentSolver {
             const condition1 = s < (3 * a + b) / 4 || s > b;
             const condition2 = mflag && Math.abs(s - b) >= Math.abs(b - c) / 2;
             const condition3 = !mflag && Math.abs(s - b) >= Math.abs(c - d) / 2;
-            const condition4 = mflag && Math.abs(b - c) < tolerance;
-            const condition5 = !mflag && Math.abs(c - d) < tolerance;
+            const condition4 = mflag && Math.abs(b - c) < tolerance_adaptive;
+            const condition5 = !mflag && Math.abs(c - d) < tolerance_adaptive;
             
             if (condition1 || condition2 || condition3 || condition4 || condition5) {
                 s = (a + b) / 2;
@@ -140,6 +150,14 @@ class BrentSolver {
             }
             
             const fs = func(s);
+            
+            // Check for NaN or Infinity
+            if (!isFinite(fs)) {
+                console.warn('Function evaluation returned non-finite value, using bisection');
+                s = (a + b) / 2;
+                mflag = true;
+            }
+            
             d = c;
             c = b;
             fc = fb;
@@ -158,7 +176,41 @@ class BrentSolver {
             }
         }
         
+        console.warn(`Brent method did not converge in ${maxIterations} iterations`);
         return b;
+    }
+
+    /**
+     * Fallback bisection method for robust convergence
+     */
+    static bisectionMethod(func, a, b, tolerance = 1e-10, maxIterations = 100) {
+        let fa = func(a);
+        let fb = func(b);
+        
+        if (fa * fb > 0) {
+            throw new Error('Function values at endpoints must have opposite signs');
+        }
+        
+        for (let iter = 0; iter < maxIterations; iter++) {
+            const c = (a + b) / 2;
+            const fc = func(c);
+            
+            if (Math.abs(fc) < tolerance || Math.abs(b - a) < tolerance) {
+                console.log(`Bisection method converged in ${iter + 1} iterations`);
+                return c;
+            }
+            
+            if (fa * fc < 0) {
+                b = c;
+                fb = fc;
+            } else {
+                a = c;
+                fa = fc;
+            }
+        }
+        
+        console.warn(`Bisection method did not converge in ${maxIterations} iterations`);
+        return (a + b) / 2;
     }
 }
 
@@ -235,31 +287,230 @@ class MasuiKe0Calculator {
     }
     
     /**
-     * ステップ4A: 数値解析によるke0の算出（厳密解）
+     * ステップ4A: 数値解析によるke0の算出（厳密解）- 高精度版
      */
     static calculateKe0Numerical(coefficients, t_peak = T_PEAK) {
         const { alpha, beta, gamma, A, B, C } = coefficients;
         
-        // f(ke0)関数の定義
+        // 数値安定性を考慮したf(ke0)関数の定義
         const f = (ke0) => {
-            const term_A = (ke0 * A / (ke0 - alpha)) * 
-                          (alpha * Math.exp(-alpha * t_peak) - ke0 * Math.exp(-ke0 * t_peak));
-            const term_B = (ke0 * B / (ke0 - beta)) * 
-                          (beta * Math.exp(-beta * t_peak) - ke0 * Math.exp(-ke0 * t_peak));
-            const term_C = (ke0 * C / (ke0 - gamma)) * 
-                          (gamma * Math.exp(-gamma * t_peak) - ke0 * Math.exp(-ke0 * t_peak));
-            
-            return term_A + term_B + term_C;
+            return this.evaluateKe0Function(ke0, { alpha, beta, gamma, A, B, C }, t_peak);
         };
+
+        // f'(ke0)関数の定義（ニュートン法用）
+        const f_prime = (ke0) => {
+            return this.evaluateKe0FunctionDerivative(ke0, { alpha, beta, gamma, A, B, C }, t_peak);
+        };
+
+        // 改善された初期推定値の算出
+        const initial_guess = this.getImprovedInitialGuess(coefficients, t_peak);
         
-        // 探索区間 [0.15, 0.26] で数値解を求める
+        // ニュートン法による初期値の改善
+        const refined_guess = this.refineInitialGuess(initial_guess, f, f_prime);
+        
+        // 狭い探索区間の設定
+        const search_width = 0.05;
+        const search_a = Math.max(0.05, refined_guess - search_width);
+        const search_b = Math.min(0.5, refined_guess + search_width);
+        
+        console.log(`Initial guess: ${initial_guess.toFixed(6)}`);
+        console.log(`Refined guess: ${refined_guess.toFixed(6)}`);
+        console.log(`Search interval: [${search_a.toFixed(6)}, ${search_b.toFixed(6)}]`);
+        
         try {
-            const ke0 = BrentSolver.findRoot(f, 0.15, 0.26);
-            return ke0;
+            // 高精度Brent法による求解
+            const ke0 = BrentSolver.findRoot(f, search_a, search_b, 1e-15, 200);
+            
+            // 結果の妥当性検証
+            if (this.validateKe0(ke0)) {
+                return ke0;
+            } else {
+                console.warn('Numerical ke0 validation failed, trying fallback methods');
+                return this.fallbackKe0Calculation(coefficients, t_peak);
+            }
         } catch (error) {
-            console.warn('Numerical ke0 calculation failed:', error.message);
-            return null;
+            console.warn('Primary numerical ke0 calculation failed:', error.message);
+            return this.fallbackKe0Calculation(coefficients, t_peak);
         }
+    }
+
+    /**
+     * 数値安定性を考慮したf(ke0)関数の評価
+     */
+    static evaluateKe0Function(ke0, coefficients, t_peak) {
+        const { alpha, beta, gamma, A, B, C } = coefficients;
+        const terms = [
+            { lambda: alpha, coeff: A },
+            { lambda: beta, coeff: B },
+            { lambda: gamma, coeff: C }
+        ];
+        
+        let result = 0;
+        
+        for (const term of terms) {
+            const { lambda, coeff } = term;
+            const delta = 1e-8;
+            
+            // 特異点の処理
+            if (Math.abs(ke0 - lambda) < delta) {
+                // テイラー展開による近似
+                const taylor_term = -ke0 * coeff * (1 - lambda * t_peak) * Math.exp(-lambda * t_peak);
+                result += taylor_term;
+            } else {
+                // 通常の計算だが、桁落ちを防ぐためexpm1を使用
+                const exp_ke0 = Math.exp(-ke0 * t_peak);
+                const exp_lambda = Math.exp(-lambda * t_peak);
+                
+                // h(ke0) = lambda * exp(-lambda * t) - ke0 * exp(-ke0 * t)
+                // 桁落ち防止のため変形
+                let h_ke0;
+                if (Math.abs(lambda - ke0) < 0.01) {
+                    // 近似式を使用
+                    h_ke0 = (lambda - ke0) * exp_lambda + ke0 * exp_ke0 * Math.expm1((ke0 - lambda) * t_peak);
+                } else {
+                    h_ke0 = lambda * exp_lambda - ke0 * exp_ke0;
+                }
+                
+                const g_ke0 = ke0 * coeff / (ke0 - lambda);
+                result += g_ke0 * h_ke0;
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * f'(ke0)関数の評価（ニュートン法用）
+     */
+    static evaluateKe0FunctionDerivative(ke0, coefficients, t_peak) {
+        const { alpha, beta, gamma, A, B, C } = coefficients;
+        const terms = [
+            { lambda: alpha, coeff: A },
+            { lambda: beta, coeff: B },
+            { lambda: gamma, coeff: C }
+        ];
+        
+        let result = 0;
+        
+        for (const term of terms) {
+            const { lambda, coeff } = term;
+            const delta = 1e-8;
+            
+            if (Math.abs(ke0 - lambda) < delta) {
+                // 特異点での導関数の近似
+                const exp_lambda = Math.exp(-lambda * t_peak);
+                const derivative_term = -coeff * (1 - lambda * t_peak) * exp_lambda - 
+                                       ke0 * coeff * t_peak * exp_lambda;
+                result += derivative_term;
+            } else {
+                // 通常の導関数計算
+                const exp_ke0 = Math.exp(-ke0 * t_peak);
+                const exp_lambda = Math.exp(-lambda * t_peak);
+                
+                const g_ke0 = ke0 * coeff / (ke0 - lambda);
+                const g_prime_ke0 = -coeff * lambda / Math.pow(ke0 - lambda, 2);
+                
+                const h_ke0 = lambda * exp_lambda - ke0 * exp_ke0;
+                const h_prime_ke0 = (ke0 * t_peak - 1) * exp_ke0;
+                
+                result += g_prime_ke0 * h_ke0 + g_ke0 * h_prime_ke0;
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * 改善された初期推定値の算出
+     */
+    static getImprovedInitialGuess(coefficients, t_peak) {
+        const { alpha, beta, gamma, A, B, C } = coefficients;
+        
+        // 重み付き平均による基本推定値
+        const weighted_avg = (A * alpha + B * beta + C * gamma) / (A + B + C);
+        
+        // T_peakに基づく補正
+        const correction = Math.log(t_peak) / t_peak;
+        const initial_estimate = weighted_avg * (1 + correction * 0.1);
+        
+        // 物理的制約内に収める
+        return Math.max(0.05, Math.min(0.5, initial_estimate));
+    }
+
+    /**
+     * ニュートン法による初期値の改善
+     */
+    static refineInitialGuess(initial_guess, f, f_prime, max_iterations = 3) {
+        let x = initial_guess;
+        
+        for (let i = 0; i < max_iterations; i++) {
+            const fx = f(x);
+            const fpx = f_prime(x);
+            
+            if (Math.abs(fpx) < 1e-14) {
+                console.warn('Newton refinement: derivative too small');
+                break;
+            }
+            
+            const delta = fx / fpx;
+            x = x - delta;
+            
+            // 物理的制約を保持
+            x = Math.max(0.05, Math.min(0.5, x));
+            
+            if (Math.abs(delta) < 1e-10) {
+                console.log(`Newton refinement converged in ${i + 1} iterations`);
+                break;
+            }
+        }
+        
+        return x;
+    }
+
+    /**
+     * ke0の妥当性検証
+     */
+    static validateKe0(ke0) {
+        return ke0 >= 0.05 && ke0 <= 0.5 && isFinite(ke0);
+    }
+
+    /**
+     * フォールバック計算戦略
+     */
+    static fallbackKe0Calculation(coefficients, t_peak) {
+        const { alpha, beta, gamma, A, B, C } = coefficients;
+        
+        // フォールバック1: 二分法による求解
+        const f = (ke0) => this.evaluateKe0Function(ke0, coefficients, t_peak);
+        
+        try {
+            console.log('Trying fallback method: Bisection');
+            const ke0_bisection = BrentSolver.bisectionMethod(f, 0.15, 0.26, 1e-10, 100);
+            
+            if (this.validateKe0(ke0_bisection)) {
+                console.log('Fallback bisection method succeeded');
+                return ke0_bisection;
+            }
+        } catch (error) {
+            console.warn('Bisection method failed:', error.message);
+        }
+        
+        // フォールバック2: より広い区間での探索
+        try {
+            console.log('Trying fallback method: Wide interval search');
+            const ke0_wide = BrentSolver.findRoot(f, 0.05, 0.5, 1e-10, 200);
+            
+            if (this.validateKe0(ke0_wide)) {
+                console.log('Wide interval search succeeded');
+                return ke0_wide;
+            }
+        } catch (error) {
+            console.warn('Wide interval search failed:', error.message);
+        }
+        
+        // 最終フォールバック: 回帰モデルの使用
+        console.warn('All numerical methods failed, using regression model');
+        return null;
     }
     
     /**

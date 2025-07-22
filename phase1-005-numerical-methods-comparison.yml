@@ -1,0 +1,581 @@
+# phase1-005-numerical-methods-comparison.yml
+task_id: PHASE1-005-REVISED
+task_name: Numerical Methods Comparison (Euler vs RK4 vs LSODA)
+priority: CRITICAL
+estimated_hours: 24-32
+
+objectives:
+  - Compare Euler, RK4, and simplified LSODA implementations
+  - Enable method switching in all simulation modes
+  - Quantify accuracy, stability, and performance differences
+
+implementation:
+  step1_create_unified_solver_interface:
+    new_file: js/numerical-solvers.js
+    code: |
+      // Unified interface for all numerical methods
+      class NumericalSolvers {
+          constructor() {
+              this.methods = {
+                  euler: {
+                      name: "Euler Method",
+                      description: "First-order explicit method (Current)",
+                      solver: new EulerSolver(),
+                      order: 1,
+                      adaptive: false
+                  },
+                  rk4: {
+                      name: "Runge-Kutta 4th Order",
+                      description: "Fourth-order fixed-step method",
+                      solver: new RK4Solver(),
+                      order: 4,
+                      adaptive: false
+                  },
+                  lsoda: {
+                      name: "LSODA (Simplified)",
+                      description: "Adaptive-order stiff/non-stiff solver",
+                      solver: new SimplifiedLSODA(),
+                      order: "1-12 (adaptive)",
+                      adaptive: true
+                  }
+              };
+              
+              this.currentMethod = 'euler';  // Default
+          }
+          
+          setMethod(methodName) {
+              if (this.methods[methodName]) {
+                  this.currentMethod = methodName;
+                  return true;
+              }
+              return false;
+          }
+          
+          solve(odeSystem, initialState, timeSpan, options = {}) {
+              const solver = this.methods[this.currentMethod].solver;
+              return solver.solve(odeSystem, initialState, timeSpan, options);
+          }
+      }
+
+  step2_implement_solvers:
+    euler_solver: |
+      class EulerSolver {
+          solve(odeSystem, initialState, timeSpan, options) {
+              const dt = options.timeStep || 0.1;
+              const results = [{time: timeSpan[0], state: {...initialState}}];
+              
+              let currentState = {...initialState};
+              let currentTime = timeSpan[0];
+              
+              while (currentTime < timeSpan[1]) {
+                  // Calculate derivatives
+                  const derivatives = odeSystem(currentTime, currentState);
+                  
+                  // Update state (Euler method)
+                  for (const key in currentState) {
+                      currentState[key] += dt * derivatives[key];
+                  }
+                  
+                  currentTime += dt;
+                  results.push({
+                      time: currentTime,
+                      state: {...currentState},
+                      stepSize: dt
+                  });
+              }
+              
+              return results;
+          }
+      }
+    
+    rk4_solver: |
+      class RK4Solver {
+          solve(odeSystem, initialState, timeSpan, options) {
+              const dt = options.timeStep || 0.1;
+              const results = [{time: timeSpan[0], state: {...initialState}}];
+              
+              let currentState = {...initialState};
+              let currentTime = timeSpan[0];
+              
+              while (currentTime < timeSpan[1]) {
+                  // RK4 method
+                  const k1 = odeSystem(currentTime, currentState);
+                  const k2 = odeSystem(currentTime + dt/2, 
+                      this.addStates(currentState, this.scaleState(k1, dt/2)));
+                  const k3 = odeSystem(currentTime + dt/2, 
+                      this.addStates(currentState, this.scaleState(k2, dt/2)));
+                  const k4 = odeSystem(currentTime + dt, 
+                      this.addStates(currentState, this.scaleState(k3, dt)));
+                  
+                  // Update state
+                  for (const key in currentState) {
+                      currentState[key] += dt/6 * (k1[key] + 2*k2[key] + 
+                                                   2*k3[key] + k4[key]);
+                  }
+                  
+                  currentTime += dt;
+                  results.push({
+                      time: currentTime,
+                      state: {...currentState},
+                      stepSize: dt
+                  });
+              }
+              
+              return results;
+          }
+          
+          addStates(state1, state2) {
+              const result = {};
+              for (const key in state1) {
+                  result[key] = state1[key] + state2[key];
+              }
+              return result;
+          }
+          
+          scaleState(state, factor) {
+              const result = {};
+              for (const key in state) {
+                  result[key] = state[key] * factor;
+              }
+              return result;
+          }
+      }
+    
+    simplified_lsoda: |
+      // Simplified LSODA implementation
+      class SimplifiedLSODA {
+          constructor() {
+              this.tolerances = {
+                  absolute: 1e-8,
+                  relative: 1e-6
+              };
+              this.maxOrder = 5;  // Simplified from 12
+              this.minStep = 0.001;
+              this.maxStep = 1.0;
+          }
+          
+          solve(odeSystem, initialState, timeSpan, options) {
+              const results = [{time: timeSpan[0], state: {...initialState}}];
+              
+              let currentState = {...initialState};
+              let currentTime = timeSpan[0];
+              let currentStep = options.initialStep || 0.1;
+              let currentOrder = 1;
+              let isStiff = false;
+              
+              // History for multistep methods
+              const history = [];
+              
+              while (currentTime < timeSpan[1]) {
+                  // Stiffness detection
+                  isStiff = this.detectStiffness(odeSystem, currentTime, 
+                                                  currentState, currentStep);
+                  
+                  // Choose method based on stiffness
+                  let newState, error;
+                  if (isStiff) {
+                      // Use implicit method (simplified BDF)
+                      ({ newState, error } = this.implicitStep(
+                          odeSystem, currentTime, currentState, currentStep, history
+                      ));
+                  } else {
+                      // Use explicit method (Adams-Bashforth)
+                      ({ newState, error } = this.explicitStep(
+                          odeSystem, currentTime, currentState, currentStep, 
+                          currentOrder, history
+                      ));
+                  }
+                  
+                  // Error control and step size adjustment
+                  const errorNorm = this.calculateErrorNorm(error, newState);
+                  
+                  if (errorNorm < 1.0) {
+                      // Accept step
+                      currentState = newState;
+                      currentTime += currentStep;
+                      
+                      // Store in history
+                      history.push({
+                          time: currentTime,
+                          state: currentState,
+                          derivatives: odeSystem(currentTime, currentState)
+                      });
+                      if (history.length > this.maxOrder) history.shift();
+                      
+                      results.push({
+                          time: currentTime,
+                          state: {...currentState},
+                          stepSize: currentStep,
+                          order: currentOrder,
+                          method: isStiff ? 'BDF' : 'Adams'
+                      });
+                      
+                      // Adjust step size
+                      const factor = Math.min(2.0, Math.max(0.5, 
+                          0.9 * Math.pow(1.0 / errorNorm, 1.0 / (currentOrder + 1))));
+                      currentStep = Math.min(this.maxStep, 
+                          Math.max(this.minStep, currentStep * factor));
+                      
+                      // Order selection
+                      currentOrder = this.selectOrder(history, errorNorm);
+                  } else {
+                      // Reject step and reduce step size
+                      currentStep *= 0.5;
+                  }
+              }
+              
+              return results;
+          }
+          
+          detectStiffness(odeSystem, t, state, h) {
+              // Simplified stiffness detection
+              const f = odeSystem(t, state);
+              const perturbation = 1e-6;
+              
+              let maxEigenvalue = 0;
+              for (const key in state) {
+                  const perturbedState = {...state};
+                  perturbedState[key] += perturbation;
+                  const fPerturbed = odeSystem(t, perturbedState);
+                  
+                  const jacobianDiag = (fPerturbed[key] - f[key]) / perturbation;
+                  maxEigenvalue = Math.max(maxEigenvalue, Math.abs(jacobianDiag));
+              }
+              
+              // If eigenvalue * step size > 2, system is stiff
+              return maxEigenvalue * h > 2.0;
+          }
+          
+          implicitStep(odeSystem, t, state, h, history) {
+              // Simplified backward differentiation formula (BDF)
+              // Using fixed-point iteration for implicit equation
+              let newState = {...state};
+              const maxIterations = 10;
+              
+              for (let iter = 0; iter < maxIterations; iter++) {
+                  const f = odeSystem(t + h, newState);
+                  const tempState = {};
+                  
+                  for (const key in state) {
+                      tempState[key] = state[key] + h * f[key];
+                  }
+                  
+                  // Check convergence
+                  let converged = true;
+                  for (const key in state) {
+                      if (Math.abs(tempState[key] - newState[key]) > 1e-10) {
+                          converged = false;
+                          break;
+                      }
+                  }
+                  
+                  newState = tempState;
+                  if (converged) break;
+              }
+              
+              // Estimate error (simplified)
+              const error = {};
+              for (const key in state) {
+                  error[key] = h * h * 0.1;  // Simplified error estimate
+              }
+              
+              return { newState, error };
+          }
+          
+          explicitStep(odeSystem, t, state, h, order, history) {
+              // Adams-Bashforth method
+              if (history.length < order) {
+                  // Not enough history, use RK4
+                  const rk4 = new RK4Solver();
+                  const result = rk4.solve(odeSystem, state, [t, t + h], 
+                                           { timeStep: h });
+                  return {
+                      newState: result[1].state,
+                      error: this.estimateError(state, result[1].state, order)
+                  };
+              }
+              
+              // Multi-step method
+              const newState = {...state};
+              const coefficients = this.getAdamsCoefficients(order);
+              
+              for (const key in state) {
+                  newState[key] = state[key];
+                  for (let i = 0; i < order && i < history.length; i++) {
+                      const histPoint = history[history.length - 1 - i];
+                      newState[key] += h * coefficients[i] * 
+                                       histPoint.derivatives[key];
+                  }
+              }
+              
+              const error = this.estimateError(state, newState, order);
+              return { newState, error };
+          }
+          
+          getAdamsCoefficients(order) {
+              // Adams-Bashforth coefficients
+              const coefficients = {
+                  1: [1],
+                  2: [3/2, -1/2],
+                  3: [23/12, -16/12, 5/12],
+                  4: [55/24, -59/24, 37/24, -9/24],
+                  5: [1901/720, -2774/720, 2616/720, -1274/720, 251/720]
+              };
+              return coefficients[order] || coefficients[1];
+          }
+      }
+
+  step3_pk_pd_integration:
+    modified_engine: |
+      // Modify existing engines to use unified solver
+      class UnifiedProtocolEngine {
+          constructor() {
+              this.solver = new NumericalSolvers();
+              this.currentMethod = 'euler';  // Default
+          }
+          
+          setNumericalMethod(method) {
+              this.solver.setMethod(method);
+              this.currentMethod = method;
+          }
+          
+          simulateProtocol(patient, protocol, options = {}) {
+              // Define ODE system for 3-compartment + effect-site model
+              const odeSystem = (t, state) => {
+                  const infusionRate = this.getInfusionRate(t, protocol);
+                  
+                  return {
+                      a1: infusionRate - (this.k10 + this.k12 + this.k13) * state.a1 
+                          + this.k21 * state.a2 + this.k31 * state.a3,
+                      a2: this.k12 * state.a1 - this.k21 * state.a2,
+                      a3: this.k13 * state.a1 - this.k31 * state.a3,
+                      ce: this.ke0 * (state.a1 / this.V1 - state.ce)
+                  };
+              };
+              
+              const initialState = { a1: 0, a2: 0, a3: 0, ce: 0 };
+              const timeSpan = [0, protocol.duration];
+              
+              // Solve with selected method
+              const results = this.solver.solve(odeSystem, initialState, 
+                                                timeSpan, options);
+              
+              // Convert to standard format
+              return this.formatResults(results, patient);
+          }
+      }
+
+  step4_actual_dose_monitoring_integration:
+    monitoring_update: |
+      // Update monitoring engine for method selection
+      class EnhancedMonitoringEngine {
+          constructor() {
+              this.protocolEngine = new UnifiedProtocolEngine();
+              this.selectedMethod = 'euler';
+          }
+          
+          setCalculationMethod(method) {
+              this.selectedMethod = method;
+              this.protocolEngine.setNumericalMethod(method);
+              
+              // Update UI indicator
+              this.updateMethodIndicator(method);
+              
+              // Recalculate if monitoring is active
+              if (this.isMonitoring) {
+                  this.recalculateWithNewMethod();
+              }
+          }
+          
+          updateMethodIndicator(method) {
+              const indicator = document.getElementById('current-method-indicator');
+              if (indicator) {
+                  indicator.textContent = `Current Method: ${
+                      this.protocolEngine.solver.methods[method].name
+                  }`;
+                  
+                  // Add performance warning for LSODA
+                  if (method === 'lsoda') {
+                      indicator.innerHTML += 
+                          ' <span class="warning">(May be slower)</span>';
+                  }
+              }
+          }
+          
+          generateComparativeChart() {
+              const methods = ['euler', 'rk4', 'lsoda'];
+              const datasets = [];
+              
+              for (const method of methods) {
+                  this.protocolEngine.setNumericalMethod(method);
+                  const result = this.protocolEngine.simulateProtocol(
+                      this.currentPatient, 
+                      this.currentProtocol
+                  );
+                  
+                  datasets.push({
+                      label: `${method.toUpperCase()} - Effect Site`,
+                      data: result.map(point => ({
+                          x: point.time,
+                          y: point.effectSiteConc
+                      })),
+                      borderColor: this.getMethodColor(method)
+                  });
+              }
+              
+              return {
+                  type: 'line',
+                  data: { datasets },
+                  options: {
+                      responsive: true,
+                      plugins: {
+                          title: {
+                              display: true,
+                              text: 'Numerical Method Comparison'
+                          }
+                      }
+                  }
+              };
+          }
+      }
+
+  step5_comparison_interface:
+    ui_components: |
+      <!-- Method selector for all modes -->
+      <div class="numerical-method-selector">
+          <label>Calculation Method:</label>
+          <select id="numerical-method" onchange="updateNumericalMethod(this.value)">
+              <option value="euler">Euler (Current/Fast)</option>
+              <option value="rk4">RK4 (Recommended)</option>
+              <option value="lsoda">LSODA (Research)</option>
+          </select>
+          
+          <button onclick="showMethodComparison()" class="info-button">
+              Compare Methods
+          </button>
+      </div>
+      
+      <!-- Comparison modal -->
+      <div id="method-comparison-modal" class="modal">
+          <div class="modal-content">
+              <h3>Numerical Method Comparison</h3>
+              
+              <div class="test-scenario-selector">
+                  <label>Test Scenario:</label>
+                  <select id="test-scenario">
+                      <option value="bolus">Rapid Bolus</option>
+                      <option value="induction">Standard Induction</option>
+                      <option value="maintenance">Long Maintenance</option>
+                      <option value="awakening">Awakening Phase</option>
+                      <option value="stiff">Stiff System Test</option>
+                  </select>
+              </div>
+              
+              <canvas id="method-comparison-chart"></canvas>
+              
+              <div id="comparison-metrics">
+                  <table>
+                      <thead>
+                          <tr>
+                              <th>Method</th>
+                              <th>Max Error (%)</th>
+                              <th>RMSE</th>
+                              <th>Computation Time (ms)</th>
+                              <th>Steps Used</th>
+                              <th>Stability</th>
+                          </tr>
+                      </thead>
+                      <tbody id="metrics-tbody"></tbody>
+                  </table>
+              </div>
+              
+              <div class="comparison-actions">
+                  <button onclick="downloadComparisonCSV()">
+                      Download Full Comparison Data
+                  </button>
+                  <button onclick="downloadMethodReport()">
+                      Generate Performance Report
+                  </button>
+              </div>
+          </div>
+      </div>
+
+  step6_csv_export_enhanced:
+    export_functions: |
+      generateEnhancedComparisonCSV() {
+          const headers = [
+              'Scenario',
+              'Time(min)',
+              'PlasmaConc(ug/mL)',
+              'Ce_Euler(ug/mL)',
+              'Ce_RK4(ug/mL)',
+              'Ce_LSODA(ug/mL)',
+              'Error_Euler(%)',
+              'Error_RK4(%)',
+              'Error_LSODA(%)',
+              'StepSize_Euler(s)',
+              'StepSize_RK4(s)',
+              'StepSize_LSODA(s)',
+              'LSODA_Order',
+              'LSODA_Method',
+              'Stiffness_Detected'
+          ];
+          
+          // Include computation performance metrics
+          const performanceHeaders = [
+              'Method',
+              'Total_Time(ms)',
+              'Avg_Step_Time(μs)',
+              'Memory_Used(KB)',
+              'Total_Steps',
+              'Rejected_Steps',
+              'Order_Changes'
+          ];
+          
+          return {
+              comparison: this.formatCSV(headers, this.comparisonData),
+              performance: this.formatCSV(performanceHeaders, this.performanceData)
+          };
+      }
+
+testing_requirements:
+  accuracy_tests:
+    - Test against analytical solutions where available
+    - Compare with published PK/PD data
+    - Verify conservation of mass
+    
+  performance_benchmarks:
+    - Euler: Baseline (1x)
+    - RK4: Expected 1.2-1.5x
+    - LSODA: Expected 2-10x (scenario dependent)
+    
+  stability_tests:
+    - Long-term simulations (24+ hours)
+    - Stiff systems (high ke0 values)
+    - Discontinuous inputs (multiple boluses)
+
+expected_benefits:
+  method_characteristics:
+    euler:
+      - Speed: Fastest
+      - Accuracy: Limited (1st order)
+      - Stability: Conditional
+      - Use case: Quick estimates
+      
+    rk4:
+      - Speed: Fast
+      - Accuracy: High (4th order)
+      - Stability: Good
+      - Use case: Clinical standard
+      
+    lsoda:
+      - Speed: Variable
+      - Accuracy: Excellent (adaptive order)
+      - Stability: Excellent (handles stiff systems)
+      - Use case: Research, difficult cases
+
+warnings_and_limitations:
+  - LSODA implementation is simplified
+  - Full LSODA would require extensive testing
+  - Performance may vary significantly by scenario
+  - Browser limitations may affect large simulations

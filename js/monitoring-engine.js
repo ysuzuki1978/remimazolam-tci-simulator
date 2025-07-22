@@ -10,6 +10,23 @@
  * - Advanced pharmacokinetic simulation
  */
 
+// Import required modules for Node.js environment
+if (typeof require !== 'undefined') {
+    const { MasuiKe0Calculator } = require('../utils/masui-ke0-calculator.js');
+    const { calculateEffectSiteConcentrations } = require('../utils/vhac.js');
+    const { NumericalSolvers } = require('./numerical-solvers.js');
+    const { PKPDIntegrationAdapter } = require('./pk-pd-system.js');
+    const { SystemState, TimePoint, SimulationResult } = require('./models.js');
+    
+    global.MasuiKe0Calculator = MasuiKe0Calculator;
+    global.calculateEffectSiteConcentrations = calculateEffectSiteConcentrations;
+    global.NumericalSolvers = NumericalSolvers;
+    global.PKPDIntegrationAdapter = PKPDIntegrationAdapter;
+    global.SystemState = SystemState;
+    global.TimePoint = TimePoint;
+    global.SimulationResult = SimulationResult;
+}
+
 // VHAC functions are now imported from utils/vhac.js
 
 /**
@@ -55,17 +72,60 @@ function calculateEffectSiteDiscrete(plasmaConcentrations, timePoints, ke0, dt =
 class MonitoringEngine {
     constructor() {
         this.patient = null;
-        this.pkParams = null;
         this.doseEvents = [];
         this.lastSimulationResult = null;
-        this.calculationMethod = 'VHAC + RK4 Engine';
-        this.precision = 0.01; // 0.01-minute precision
+        this.calculationMethod = 'RK4 Engine (High Precision)';
+        this.precision = 0.01; // 0.01-minute high precision
     }
 
     setPatient(patient) {
         this.patient = patient;
-        this.pkParams = this.calculatePKParameters(patient);
+        
+        // Calculate and set PK parameters if not already set
+        if (!this.patient.pkParams) {
+            this.calculatePKParameters();
+        }
+        
         console.log('Patient set for monitoring engine:', patient.id);
+    }
+
+    /**
+     * Calculate PK parameters for the patient using MasuiKe0Calculator
+     */
+    calculatePKParameters() {
+        try {
+            const result = MasuiKe0Calculator.calculateKe0Complete(
+                this.patient.age,
+                this.patient.weight,
+                this.patient.height,
+                this.patient.sex,
+                this.patient.asaPS
+            );
+
+            if (result.success) {
+                this.patient.pkParams = {
+                    V1: result.pkParameters.V1,
+                    V2: result.pkParameters.V2,
+                    V3: result.pkParameters.V3,
+                    CL: result.pkParameters.CL,
+                    Q2: result.pkParameters.Q2,
+                    Q3: result.pkParameters.Q3,
+                    ke0: result.ke0_numerical || result.ke0_regression,
+                    k10: result.rateConstants.k10,
+                    k12: result.rateConstants.k12,
+                    k21: result.rateConstants.k21,
+                    k13: result.rateConstants.k13,
+                    k31: result.rateConstants.k31
+                };
+                
+                console.log('PK parameters calculated for patient:', this.patient.pkParams);
+            } else {
+                throw new Error('Failed to calculate PK parameters: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error calculating PK parameters:', error);
+            throw error;
+        }
     }
 
     addDoseEvent(doseEvent) {
@@ -96,42 +156,12 @@ class MonitoringEngine {
         console.log('All dose events cleared');
     }
 
-    calculatePKParameters(patient) {
-        console.log('Calculating PK parameters for monitoring with Masui Ke0 model');
-        
-        // Use the exact Masui Ke0 calculator
-        const result = MasuiKe0Calculator.calculateKe0Complete(
-            patient.age,
-            patient.weight,
-            patient.height,
-            patient.sex,
-            patient.asaPS
-        );
-        
-        if (!result.success) {
-            throw new Error('Failed to calculate PK parameters: ' + result.error);
-        }
-        
-        const pkParams = result.pkParameters;
-        const rateConstants = result.rateConstants;
-        const ke0 = result.ke0_numerical || result.ke0_regression;
-        
-        return new PKParameters(
-            pkParams.V1,
-            pkParams.V2,
-            pkParams.V3,
-            pkParams.CL,
-            pkParams.Q2,
-            pkParams.Q3,
-            ke0
-        );
-    }
 
     /**
      * Perform high-precision pharmacokinetic simulation
      */
     runSimulation(simulationDurationMin = null) {
-        if (!this.patient || !this.pkParams) {
+        if (!this.patient || !this.patient.pkParams) {
             throw new Error('Patient and PK parameters must be set before simulation');
         }
 
@@ -152,14 +182,14 @@ class MonitoringEngine {
             times.push(t);
         }
 
-        // Calculate plasma concentrations using advanced methods
-        const plasmaResult = this.calculatePlasmaConcentrationsAdvanced(times);
+        // Calculate plasma concentrations using selected numerical method
+        const plasmaResult = this.calculatePlasmaConcentrationsWithMethod(times);
 
         // Calculate effect-site concentrations using VHAC method
         const effectSiteResult = calculateEffectSiteConcentrations(
             plasmaResult.concentrations,
             times,
-            this.pkParams.ke0,
+            this.patient.pkParams.ke0,
             true  // Use VHAC method
         );
         
@@ -189,6 +219,8 @@ class MonitoringEngine {
             timePoints.push(timePoint);
         }
 
+        console.log('Creating SimulationResult with calculationMethod:', this.calculationMethod);
+        
         this.lastSimulationResult = new SimulationResult(
             timePoints,
             this.patient,
@@ -208,7 +240,167 @@ class MonitoringEngine {
     }
 
     /**
+     * Calculate plasma concentrations using selected numerical method
+     * FIXED: Unified with propofol implementation to handle multiple dose events properly
+     */
+    calculatePlasmaConcentrationsWithMethod(times) {
+        const timeStep = times.length > 1 ? times[1] - times[0] : this.precision;
+        
+        // Initialize state with t=0 bolus as initial condition (unified bolus processing)
+        let initialBolus = 0;
+        const bolusEvents = [];
+        const infusionEvents = [];
+        
+        for (const event of this.doseEvents) {
+            const eventTime = event.timeInMinutes;
+            
+            if (event.bolusMg > 0) {
+                if (eventTime === 0) {
+                    // t=0 bolus becomes initial condition
+                    initialBolus += event.bolusMg;
+                } else {
+                    // Non-zero time bolus events
+                    bolusEvents.push({ time: eventTime, dose: event.bolusMg });
+                }
+            }
+            
+            // Add infusion rate changes (including rate = 0 for stopping infusion)
+            const newRate = event.continuousMgKgHr;
+            if (infusionEvents.length === 0 || 
+                newRate !== infusionEvents[infusionEvents.length - 1].rate) {
+                infusionEvents.push({ time: eventTime, rate: newRate });
+            }
+        }
+        
+        // Sort events
+        bolusEvents.sort((a, b) => a.time - b.time);
+        infusionEvents.sort((a, b) => a.time - b.time);
+        
+        // Add initial zero infusion if needed
+        if (infusionEvents.length === 0 || infusionEvents[0].time > 0) {
+            infusionEvents.unshift({ time: 0.0, rate: 0.0 });
+        }
+        
+        console.log(`=== MonitoringEngine FIXED UNIFIED Path ===`);
+        console.log(`Initial bolus dose: ${initialBolus}mg`);
+        console.log(`Bolus events to process:`, bolusEvents);
+        console.log(`Infusion events to process:`, infusionEvents);
+        console.log(`Patient weight: ${this.patient.weight}kg, V1: ${this.patient.pkParams.V1}`);
+        
+        // Initialize state with t=0 bolus as initial condition
+        let state = new SystemState(initialBolus, 0, 0);
+        const plasmaConcentrations = [];
+        
+        let bolusIndex = 0;
+        let infusionIndex = 0;
+        let currentInfusionRate = 0.0;
+        
+        for (let index = 0; index < times.length; index++) {
+            const currentTime = times[index];
+            
+            // Apply bolus doses - exclude t=0 boluses (already in initial condition)
+            while (bolusIndex < bolusEvents.length && 
+                   Math.abs(bolusEvents[bolusIndex].time - currentTime) < timeStep / 2) {
+                if (bolusEvents[bolusIndex].time > 0) { // Only apply non-zero time boluses
+                    state.a1 += bolusEvents[bolusIndex].dose;
+                    console.log(`Applied bolus: ${bolusEvents[bolusIndex].dose}mg at time ${currentTime}`);
+                }
+                bolusIndex++;
+            }
+            
+            // Update infusion rate - handle rate changes including stopping (rate=0)
+            while (infusionIndex < infusionEvents.length && 
+                   currentTime >= infusionEvents[infusionIndex].time) {
+                currentInfusionRate = infusionEvents[infusionIndex].rate;
+                console.log(`Updated infusion rate to ${currentInfusionRate} mg/kg/hr at time ${currentTime}`);
+                infusionIndex++;
+            }
+            
+            // Calculate plasma concentration
+            const plasmaConc = Math.max(0.0, state.a1 / this.patient.pkParams.V1);
+            plasmaConcentrations.push(plasmaConc);
+            
+            // Debug logging for key timepoints
+            if (Math.abs(currentTime - 2.0) < 0.01 || Math.abs(currentTime - 60.0) < 0.01) {
+                console.log(`MonitoringEngine at t=${currentTime}min: a1=${state.a1.toFixed(6)}mg, plasma=${plasmaConc.toFixed(6)} μg/mL, infusion rate=${currentInfusionRate} mg/kg/hr`);
+            }
+            
+            // Update state for next time step using RK4
+            if (index < times.length - 1) {
+                const infusionRateMgMin = (currentInfusionRate * this.patient.weight) / 60.0;
+                state = this.updateSystemStateRK4(state, infusionRateMgMin, timeStep);
+            }
+        }
+        
+        console.log(`MonitoringEngine unified result: ${plasmaConcentrations.length} data points`);
+        console.log(`Sample concentrations:`, plasmaConcentrations.slice(0, 3).map((c, i) => ({ 
+            time: times[i], 
+            plasma: c.toFixed(6)
+        })));
+        console.log(`Final concentration: ${plasmaConcentrations[plasmaConcentrations.length - 1].toFixed(6)} μg/mL`);
+        
+        return {
+            concentrations: plasmaConcentrations,
+            method: 'RK4'
+        };
+    }
+
+    /**
+     * RK4 integration for system state update (added for unified processing)
+     */
+    updateSystemStateRK4(state, infusionRateMgMin, dt) {
+        const { k10, k12, k21, k13, k31 } = this.patient.pkParams;
+        
+        const derivatives = (s) => ({
+            da1dt: infusionRateMgMin - (k10 + k12 + k13) * s.a1 + k21 * s.a2 + k31 * s.a3,
+            da2dt: k12 * s.a1 - k21 * s.a2,
+            da3dt: k13 * s.a1 - k31 * s.a3
+        });
+        
+        const k1 = derivatives(state);
+        const k2 = derivatives({
+            a1: state.a1 + 0.5 * dt * k1.da1dt,
+            a2: state.a2 + 0.5 * dt * k1.da2dt,
+            a3: state.a3 + 0.5 * dt * k1.da3dt
+        });
+        const k3 = derivatives({
+            a1: state.a1 + 0.5 * dt * k2.da1dt,
+            a2: state.a2 + 0.5 * dt * k2.da2dt,
+            a3: state.a3 + 0.5 * dt * k2.da3dt
+        });
+        const k4 = derivatives({
+            a1: state.a1 + dt * k3.da1dt,
+            a2: state.a2 + dt * k3.da2dt,
+            a3: state.a3 + dt * k3.da3dt
+        });
+        
+        return {
+            a1: state.a1 + (dt / 6.0) * (k1.da1dt + 2*k2.da1dt + 2*k3.da1dt + k4.da1dt),
+            a2: state.a2 + (dt / 6.0) * (k1.da2dt + 2*k2.da2dt + 2*k3.da2dt + k4.da2dt),
+            a3: state.a3 + (dt / 6.0) * (k1.da3dt + 2*k2.da3dt + 2*k3.da3dt + k4.da3dt)
+        };
+    }
+
+    /**
+     * Euler integration for system state update
+     */
+    updateSystemStateEuler(state, infusionRateMgMin, dt) {
+        const { k10, k12, k21, k13, k31 } = this.patient.pkParams;
+        
+        const da1dt = infusionRateMgMin - (k10 + k12 + k13) * state.a1 + k21 * state.a2 + k31 * state.a3;
+        const da2dt = k12 * state.a1 - k21 * state.a2;
+        const da3dt = k13 * state.a1 - k31 * state.a3;
+        
+        return {
+            a1: state.a1 + dt * da1dt,
+            a2: state.a2 + dt * da2dt,
+            a3: state.a3 + dt * da3dt
+        };
+    }
+
+    /**
      * Calculate plasma concentrations using 3-compartment model with high precision
+     * DEPRECATED: Use calculatePlasmaConcentrationsWithMethod instead
      */
     calculatePlasmaConcentrationsAdvanced(times) {
         const timeStep = times.length > 1 ? times[1] - times[0] : this.precision;
@@ -271,11 +463,11 @@ class MonitoringEngine {
     calculatePlasmaConcentrationsLSODA(times, bolusEvents, infusionEvents) {
         const solver = new PKLSODASolver();
         const pkParams = {
-            k10: this.pkParams.k10,
-            k12: this.pkParams.k12,
-            k21: this.pkParams.k21,
-            k13: this.pkParams.k13,
-            k31: this.pkParams.k31
+            k10: this.patient.pkParams.k10,
+            k12: this.patient.pkParams.k12,
+            k21: this.patient.pkParams.k21,
+            k13: this.patient.pkParams.k13,
+            k31: this.patient.pkParams.k31
         };
 
         // Prepare infusion rates array
@@ -307,7 +499,7 @@ class MonitoringEngine {
             );
 
             const concentrations = result.y.map(state => 
-                Math.max(0.0, state[0] / this.pkParams.v1)
+                Math.max(0.0, state[0] / this.patient.pkParams.V1)
             );
 
             console.log('LSODA simulation completed successfully');
@@ -345,8 +537,13 @@ class MonitoringEngine {
             // Apply bolus doses - same logic as original app
             while (bolusIndex < bolusEvents.length && 
                    Math.abs(bolusEvents[bolusIndex].time - currentTime) < timeStep / 2) {
+                console.log(`=== MonitoringEngine BOLUS DEBUG ===`);
+                console.log(`Before bolus: a1=${state.a1}, V1=${this.patient.pkParams.V1}`);
+                console.log(`Before bolus plasma concentration: ${state.a1 / this.patient.pkParams.V1}`);
                 state.a1 += bolusEvents[bolusIndex].dose;
                 console.log(`Applied bolus: ${bolusEvents[bolusIndex].dose}mg at time ${currentTime} (bolus time: ${bolusEvents[bolusIndex].time})`);
+                console.log(`After bolus: a1=${state.a1}`);
+                console.log(`After bolus plasma concentration: ${state.a1 / this.patient.pkParams.V1}`);
                 bolusIndex++;
             }
             
@@ -358,13 +555,13 @@ class MonitoringEngine {
             }
             
             // Calculate plasma concentration
-            const plasmaConc = Math.max(0.0, state.a1 / this.pkParams.v1);
+            const plasmaConc = Math.max(0.0, state.a1 / this.patient.pkParams.V1);
             plasmaConcentrations.push(plasmaConc);
             
             // Update state for next time step using RK4
             if (index < times.length - 1) {
                 const infusionRateMgMin = (currentInfusionRate * this.patient.weight) / 60.0;
-                state = this.updateStateRK4(state, infusionRateMgMin, timeStep);
+                state = this.updateStateRK4(state, infusionRateMgMin, timeStep, currentTime);
             }
         }
         
@@ -383,8 +580,19 @@ class MonitoringEngine {
     /**
      * 4th order Runge-Kutta integration for state update
      */
-    updateStateRK4(state, infusionRateMgMin, dt) {
-        const { k10, k12, k21, k13, k31 } = this.pkParams;
+    updateStateRK4(state, infusionRateMgMin, dt, currentTime = 0) {
+        const { k10, k12, k21, k13, k31 } = this.patient.pkParams;
+        
+        // DEBUG: Log key parameters for 2-minute timepoint investigation
+        if (currentTime >= 1.99 && currentTime <= 2.01) {
+            console.log('=== MonitoringEngine DEBUG at t=2min ===');
+            console.log('Current time:', currentTime);
+            console.log('V1:', this.patient.pkParams.V1);
+            console.log('k10:', k10, 'k12:', k12, 'k21:', k21, 'k13:', k13, 'k31:', k31);
+            console.log('Current state a1:', state.a1, 'a2:', state.a2, 'a3:', state.a3);
+            console.log('Infusion rate (mg/min):', infusionRateMgMin);
+            console.log('Plasma concentration:', state.a1 / this.patient.pkParams.V1);
+        }
         
         const derivatives = (s) => ({
             da1dt: infusionRateMgMin - (k10 + k12 + k13) * s.a1 + k21 * s.a2 + k31 * s.a3,
@@ -447,10 +655,384 @@ class MonitoringEngine {
         return this.lastSimulationResult.toCSV();
     }
 
+    /**
+     * Generate time points for simulation
+     */
+    generateTimePoints(durationMin) {
+        const timeStep = 0.5; // 0.5 minute intervals
+        const times = [];
+        for (let t = 0; t <= durationMin; t += timeStep) {
+            times.push(t);
+        }
+        return times;
+    }
+
+    /**
+     * Get current infusion rate at a specific time
+     */
+    getCurrentInfusionRate(time) {
+        let currentRate = 0;
+        for (const event of this.doseEvents) {
+            if (event.timeInMinutes <= time) {
+                currentRate = event.continuousMgKgHr * this.patient.weight / 60.0; // Convert to mg/min
+            }
+        }
+        return currentRate;
+    }
+
+    /**
+     * Export CSV with results from all calculation methods
+     * Phase1-006: Multi-method comparison CSV export
+     */
+    exportAllMethodsToCSV() {
+        if (!this.doseEvents || this.doseEvents.length === 0) {
+            throw new Error('No dose events available for multi-method export');
+        }
+
+        if (!this.patient) {
+            throw new Error('Patient information not available for simulation');
+        }
+
+        console.log('Starting multi-method CSV export...');
+        console.log('PKPDIntegrationAdapter type:', typeof PKPDIntegrationAdapter);
+        console.log('DoseEvent type:', typeof DoseEvent);
+        
+        const methods = ['euler', 'rk4'];
+        const allResults = {};
+        
+        console.log('Methods to process:', methods);
+        
+        // Calculate results for each method
+        for (const method of methods) {
+            try {
+                console.log(`Calculating with ${method} method...`);
+                console.log(`Processing method: ${method} (${typeof method})`);
+                
+                // Temporarily store current method (will be restored later)
+                this.calculationMethod = method;
+                
+                // Debug: Check if PKPDIntegrationAdapter is available and method is supported
+                console.log(`PKPDIntegrationAdapter available: ${typeof PKPDIntegrationAdapter !== 'undefined'}`);
+                if (typeof PKPDIntegrationAdapter !== 'undefined') {
+                    const testAdapter = new PKPDIntegrationAdapter(this.patient.pkParams);
+                    console.log(`Method ${method} set result:`, testAdapter.setMethod(method));
+                    console.log(`Available methods:`, testAdapter.solver.listMethods().map(m => m.key));
+                }
+                
+                // Run simulation with current method using unified numerical solvers
+                const startTime = performance.now();
+                
+                // Use the same calculation method as regular simulation (runSimulation)
+                // This ensures consistency between graph display and CSV export
+                
+                console.log(`Method ${method} set successfully, starting simulation...`);
+                
+                // Create time sequence with appropriate precision for the method
+                let timeStep;
+                switch(method) {
+                    case 'euler':
+                        timeStep = 0.01;  // Smaller step for Euler stability
+                        break;
+                    case 'rk4':
+                        timeStep = this.precision; // Use same precision as normal simulation
+                        break;
+                    default:
+                        timeStep = 0.1;
+                }
+                
+                console.log(`Using timeStep ${timeStep} for method ${method}`);
+                
+                const simulationDuration = this.simulationDuration || 240;
+                const times = [];
+                for (let t = 0; t <= simulationDuration; t += timeStep) {
+                    times.push(t);
+                }
+                
+                // Temporarily change calculation method for this specific simulation
+                const originalMethod = this.calculationMethod;
+                this.calculationMethod = method;
+                
+                let result;
+                if (method === 'euler' || method === 'rk4') {
+                    // Use PKPDIntegrationAdapter to get real method-specific calculations
+                    const adapter = new PKPDIntegrationAdapter(this.patient.pkParams);
+                    adapter.setMethod(method);
+                    
+                    const adapterResult = adapter.simulate(this.doseEvents, this.patient, simulationDuration, {
+                        timeStep: timeStep
+                    });
+                    
+                    console.log(`${method} adapter simulation completed:`, {
+                        dataPoints: adapterResult.timeSeriesData.length,
+                        firstPlasma: adapterResult.timeSeriesData[0]?.plasmaConcentration,
+                        maxPlasma: adapterResult.maxPlasmaConcentration,
+                        method: adapterResult.stats?.method
+                    });
+                    
+                    // Use adapter results directly - they already contain proper time series data
+                    result = {
+                        timeSeriesData: adapterResult.timeSeriesData,
+                        finalPlasmaConcentration: adapterResult.finalPlasmaConcentration || 0,
+                        finalEffectSiteConcentration: adapterResult.finalEffectSiteConcentration || 0,
+                        maxPlasmaConcentration: adapterResult.maxPlasmaConcentration || 0,
+                        maxEffectSiteConcentration: adapterResult.maxEffectSiteConcentration || 0,
+                        stats: {
+                            method: method,
+                            totalSteps: adapterResult.timeSeriesData.length,
+                            timeStep: timeStep
+                        }
+                    };
+                } else {
+                    // Fallback for other methods (shouldn't happen with current setup)
+                    console.warn(`Unknown method ${method}, using default calculation`);
+                    result = { timeSeriesData: [], maxPlasmaConcentration: 0, maxEffectSiteConcentration: 0 };
+                }
+                
+                const endTime = performance.now();
+                
+                const formattedResult = {
+                    timeSeriesData: result.timeSeriesData,
+                    finalPlasmaConcentration: result.finalPlasmaConcentration,
+                    finalEffectSiteConcentration: result.finalEffectSiteConcentration,
+                    maxPlasmaConcentration: result.maxPlasmaConcentration,
+                    maxEffectSiteConcentration: result.maxEffectSiteConcentration,
+                    computationTime: endTime - startTime,
+                    stats: result.stats
+                };
+                
+                // Restore original method (removed restoration since not critical for CSV export)
+                
+                allResults[method] = formattedResult;
+                
+                console.log(`${method} calculation completed: ${allResults[method].timeSeriesData.length} data points`);
+                console.log(`${method} first plasma concentration:`, formattedResult.timeSeriesData[0]?.plasmaConcentration);
+                console.log(`${method} max plasma concentration:`, formattedResult.maxPlasmaConcentration);
+                
+            } catch (error) {
+                console.error(`Failed to calculate with ${method} method:`, error);
+                console.error(`${method} error details:`, error.message, error.stack);
+                allResults[method] = null;
+            }
+        }
+
+        // Generate combined CSV
+        return this.generateMultiMethodCSV(allResults);
+    }
+
+    /**
+     * Generate CSV with data from multiple calculation methods
+     */
+    generateMultiMethodCSV(allResults) {
+        console.log('generateMultiMethodCSV called with results:', Object.keys(allResults));
+        console.log('allResults values:', Object.keys(allResults).map(k => ({ [k]: allResults[k] !== null })));
+        
+        const validMethods = Object.keys(allResults).filter(method => allResults[method] !== null);
+        
+        console.log('Valid methods for CSV:', validMethods);
+        
+        if (validMethods.length === 0) {
+            throw new Error('No valid calculation results for CSV export');
+        }
+
+        // Use the first valid method as the time reference
+        const referenceMethod = validMethods[0];
+        const referenceData = allResults[referenceMethod].timeSeriesData;
+        
+        // Build CSV header
+        const headers = [
+            'Time(min)',
+            'InfusionRate(mg/min)'
+        ];
+        
+        // Add method-specific columns
+        for (const method of validMethods) {
+            const methodName = method.toUpperCase();
+            headers.push(
+                `PlasmaConc_${methodName}(ug/mL)`,
+                `EffectSiteConc_${methodName}(ug/mL)`
+            );
+        }
+        
+        // Add comparison columns
+        if (validMethods.length > 1) {
+            const baseMethod = validMethods[0].toUpperCase();
+            for (let i = 1; i < validMethods.length; i++) {
+                const compareMethod = validMethods[i].toUpperCase();
+                headers.push(
+                    `PlasmaConc_Diff_${compareMethod}_vs_${baseMethod}(%)`,
+                    `EffectSiteConc_Diff_${compareMethod}_vs_${baseMethod}(%)`
+                );
+            }
+        }
+        
+        // Add metadata columns
+        for (const method of validMethods) {
+            const methodName = method.toUpperCase();
+            headers.push(`ComputationTime_${methodName}(ms)`);
+            
+            if (allResults[method].stats) {
+                if (allResults[method].stats.totalSteps) {
+                    headers.push(`TotalSteps_${methodName}`);
+                }
+                if (allResults[method].stats.acceptanceRate) {
+                    headers.push(`AcceptanceRate_${methodName}`);
+                }
+            }
+        }
+
+        // Build CSV rows - filter to 1-minute intervals for readability
+        const csvRows = [headers.join(',')];
+        
+        for (let i = 0; i < referenceData.length; i++) {
+            const time = referenceData[i].time;
+            
+            // Only include data points at 1-minute intervals (0, 1, 2, 3...)
+            if (Math.abs(time - Math.round(time)) > 0.001) {
+                continue; // Skip non-integer minute times
+            }
+            
+            const row = [];
+            
+            // Time and infusion rate
+            row.push(time.toFixed(3));
+            row.push((referenceData[i].infusionRate || 0).toFixed(6));
+            
+            // Method-specific concentrations with safe array access
+            const methodValues = {};
+            let hasValidData = false;
+            
+            for (const method of validMethods) {
+                const methodData = allResults[method].timeSeriesData;
+                let data = null;
+                
+                // Find data point closest to current time
+                if (methodData && methodData.length > 0) {
+                    // Try direct index first
+                    if (i < methodData.length) {
+                        data = methodData[i];
+                    } else {
+                        // Find closest time match if array lengths differ
+                        data = methodData.find(d => Math.abs(d.time - time) < 0.01) || null;
+                    }
+                }
+                
+                const plasmaConc = data ? (data.plasmaConcentration || 0) : 0;
+                const effectConc = data ? (data.effectSiteConcentration || 0) : 0;
+                
+                if (plasmaConc > 0 || effectConc > 0) {
+                    hasValidData = true;
+                }
+                
+                methodValues[method] = { plasmaConc, effectConc };
+                
+                row.push(plasmaConc.toFixed(6));
+                row.push(effectConc.toFixed(6));
+            }
+            
+            // Skip rows where all methods have zero values (likely beyond simulation time)
+            if (!hasValidData) {
+                continue;
+            }
+            
+            // Comparison columns (percentage differences)
+            if (validMethods.length > 1) {
+                const baseMethod = validMethods[0];
+                const baseValues = methodValues[baseMethod];
+                
+                for (let j = 1; j < validMethods.length; j++) {
+                    const compareMethod = validMethods[j];
+                    const compareValues = methodValues[compareMethod];
+                    
+                    const plasmaDiff = baseValues.plasmaConc > 0 ? 
+                        ((compareValues.plasmaConc - baseValues.plasmaConc) / baseValues.plasmaConc * 100) : 0;
+                    const effectDiff = baseValues.effectConc > 0 ? 
+                        ((compareValues.effectConc - baseValues.effectConc) / baseValues.effectConc * 100) : 0;
+                    
+                    row.push(plasmaDiff.toFixed(3));
+                    row.push(effectDiff.toFixed(3));
+                }
+            }
+            
+            // Metadata (only add once per row, not per time point)
+            if (i === 0) {
+                for (const method of validMethods) {
+                    const result = allResults[method];
+                    row.push((result.computationTime || 0).toFixed(2));
+                    
+                    if (result.stats) {
+                        if (result.stats.totalSteps !== undefined) {
+                            row.push(result.stats.totalSteps);
+                        }
+                        if (result.stats.acceptanceRate !== undefined) {
+                            row.push(result.stats.acceptanceRate);
+                        }
+                    }
+                }
+            } else {
+                // Fill metadata columns with empty values for subsequent rows
+                const metadataColumns = validMethods.length + 
+                    validMethods.filter(m => allResults[m].stats?.totalSteps !== undefined).length + 
+                    validMethods.filter(m => allResults[m].stats?.acceptanceRate !== undefined).length;
+                for (let k = 0; k < metadataColumns; k++) {
+                    row.push('');
+                }
+            }
+            
+            csvRows.push(row.join(','));
+        }
+        
+        // Add summary information at the end
+        csvRows.push('');
+        csvRows.push('=== SIMULATION SUMMARY ===');
+        csvRows.push(`Patient: Age ${this.patient.age}, Weight ${this.patient.weight}kg, Height ${this.patient.height}cm`);
+        csvRows.push(`Dose Events: ${this.doseEvents.length}`);
+        csvRows.push(`Duration: ${this.simulationDuration || 240} minutes`);
+        csvRows.push(`Methods Compared: ${validMethods.join(', ')}`);
+        csvRows.push(`Export Time: ${new Date().toISOString()}`);
+        
+        // Add method-specific performance summary
+        csvRows.push('');
+        csvRows.push('=== METHOD PERFORMANCE ===');
+        for (const method of validMethods) {
+            const result = allResults[method];
+            const methodName = method.toUpperCase();
+            csvRows.push(`${methodName}: ${(result.computationTime || 0).toFixed(2)}ms, ${result.timeSeriesData.length} points`);
+            
+            if (result.stats) {
+                let statsInfo = '';
+                if (result.stats.totalSteps) statsInfo += `, ${result.stats.totalSteps} steps`;
+                if (result.stats.acceptanceRate) statsInfo += `, ${result.stats.acceptanceRate} acceptance rate`;
+                if (result.stats.method) statsInfo += `, ${result.stats.method}`;
+                csvRows.push(`${methodName} Stats: ${statsInfo.substring(2)}`); // Remove leading ', '
+            }
+        }
+        
+        const dataRows = csvRows.length - 1 - 6; // Subtract header and summary rows
+        console.log(`Multi-method CSV generated: ${dataRows} data rows (1-minute intervals), ${validMethods.length} methods`);
+        console.log(`Methods included: ${validMethods.join(', ')}`);
+        
+        return csvRows.join('\n');
+    }
+
     reset() {
         this.doseEvents = [];
         this.lastSimulationResult = null;
         console.log('Monitoring engine reset');
+    }
+
+    /**
+     * Set calculation method for display
+     * Phase1-006: Support method selection display
+     */
+    setCalculationMethod(method) {
+        const methodNames = {
+            'euler': 'Euler Method',
+            'rk4': 'VHAC + RK4 Engine',
+            'rk45': 'VHAC + RK45 Engine (Adaptive)'
+        };
+        
+        this.calculationMethod = methodNames[method] || `VHAC + ${method.toUpperCase()} Engine`;
+        console.log(`Monitoring calculation method set to: ${this.calculationMethod}`);
     }
 }
 

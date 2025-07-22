@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concentration Comparison Debug</title>
+</head>
+<body>
+    <h1>Real-time vs Monitoring vs Advanced Protocol Comparison</h1>
+    <div id="results"></div>
+    
+    <script src="models/patient.js"></script>
+    <script src="models/dose-event.js"></script>
+    <script src="utils/masui-ke0-calculator.js"></script>
+    <script src="js/pk-pd-system.js"></script>
+    <script src="js/induction-engine.js"></script>
+    <script src="js/monitoring-engine.js"></script>
+    <script src="js/enhanced-protocol-engine.js"></script>
+    <script>
+        // Create identical test patient
+        const testPatient = new Patient(
+            'DEBUG-001',
+            50,   // age
+            70.0, // weight  
+            170.0, // height
+            SexType.MALE,
+            AsapsType.CLASS_1_2,
+            new Date()
+        );
+        
+        // Test parameters
+        const bolusDose = 7; // mg
+        const continuousDose = 1.0; // mg/kg/hr
+        const testTimeMinutes = 2.0; // 2 minutes
+        
+        console.log('=== UNIFIED CONCENTRATION COMPARISON DEBUG ===');
+        console.log('Test patient:', testPatient);
+        console.log('Test parameters:', { bolusDose, continuousDose, testTimeMinutes });
+        
+        // Results container
+        const results = {
+            induction: null,
+            monitoring: null,
+            advanced: null
+        };
+        
+        // === 1. REAL-TIME INDUCTION ENGINE TEST ===
+        console.log('\n=== 1. Real-time Induction Engine ===');
+        const inductionEngine = new InductionEngine();
+        
+        if (inductionEngine.start(testPatient, bolusDose, continuousDose)) {
+            console.log('✓ Induction engine started');
+            console.log('PK Parameters:', inductionEngine.pkParams);
+            
+            // Simulate for 2 minutes (120 seconds)
+            let timeElapsed = 0;
+            const targetTime = testTimeMinutes * 60; // Convert to seconds
+            
+            const simulationInterval = setInterval(() => {
+                timeElapsed += 0.6; // 600ms intervals
+                inductionEngine.elapsedTime = timeElapsed;
+                inductionEngine.updateSimulation();
+                
+                if (timeElapsed >= targetTime) {
+                    clearInterval(simulationInterval);
+                    
+                    const state = inductionEngine.getState();
+                    results.induction = {
+                        plasmaConcentration: state.rk4.plasmaConcentration,
+                        effectSiteConcentration: state.rk4.effectSiteConcentration,
+                        elapsedTime: state.elapsedTime
+                    };
+                    
+                    console.log('Induction Result:', results.induction);
+                    inductionEngine.stop();
+                    
+                    // Continue to next test
+                    runMonitoringTest();
+                }
+            }, 600); // 600ms = 0.6 seconds
+        }
+        
+        // === 2. MONITORING ENGINE TEST ===
+        function runMonitoringTest() {
+            console.log('\n=== 2. Monitoring Engine ===');
+            const monitoringEngine = new MonitoringEngine();
+            monitoringEngine.setPatient(testPatient);
+            
+            console.log('Monitoring PK Parameters:', monitoringEngine.patient.pkParams);
+            
+            // Create dose event
+            const doseEvent = new DoseEvent(
+                0, // time = 0 minutes
+                bolusDose, // bolus
+                continuousDose, // continuous rate
+                testPatient.weight
+            );
+            
+            monitoringEngine.addDoseEvent(doseEvent);
+            
+            // Run simulation
+            const monitoringResult = monitoringEngine.runSimulation(testTimeMinutes + 1);
+            
+            if (monitoringResult) {
+                console.log('✓ Monitoring engine completed');
+                
+                // Find data point closest to 2 minutes
+                let closestPoint = monitoringResult.timePoints[0];
+                let minTimeDiff = Math.abs(closestPoint.timeInMinutes - testTimeMinutes);
+                
+                for (const point of monitoringResult.timePoints) {
+                    const timeDiff = Math.abs(point.timeInMinutes - testTimeMinutes);
+                    if (timeDiff < minTimeDiff) {
+                        minTimeDiff = timeDiff;
+                        closestPoint = point;
+                    }
+                }
+                
+                results.monitoring = {
+                    plasmaConcentration: closestPoint.plasmaConcentration,
+                    effectSiteConcentration: closestPoint.effectSiteConcentration,
+                    timeInMinutes: closestPoint.timeInMinutes
+                };
+                
+                console.log('Monitoring Result:', results.monitoring);
+                
+                // Continue to next test
+                runAdvancedProtocolTest();
+            }
+        }
+        
+        // === 3. ADVANCED PROTOCOL ENGINE TEST ===
+        function runAdvancedProtocolTest() {
+            console.log('\n=== 3. Advanced Protocol Engine ===');
+            const advancedEngine = new EnhancedProtocolEngine();
+            advancedEngine.setPatient(testPatient);
+            
+            console.log('Advanced PK Parameters:', advancedEngine.patient.pkParams);
+            
+            // Create dose event
+            const doseEvent = new DoseEvent(
+                0, // time = 0 minutes
+                bolusDose, // bolus
+                continuousDose, // continuous rate
+                testPatient.weight
+            );
+            
+            // Simulate concentration at 2 minutes using PKPDIntegrationAdapter directly
+            try {
+                const adapter = new PKPDIntegrationAdapter(advancedEngine.patient.pkParams);
+                adapter.setMethod('rk4');
+                
+                const simulationResult = adapter.simulate([doseEvent], testPatient, testTimeMinutes + 0.5, {
+                    timeStep: 0.01
+                });
+                
+                // Find point closest to 2 minutes
+                let targetPoint = null;
+                let minDiff = Infinity;
+                
+                for (const dataPoint of simulationResult.timeSeriesData) {
+                    const diff = Math.abs(dataPoint.time - testTimeMinutes);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        targetPoint = dataPoint;
+                    }
+                }
+                
+                if (targetPoint) {
+                    results.advanced = {
+                        plasmaConcentration: targetPoint.plasmaConcentration,
+                        effectSiteConcentration: targetPoint.effectSiteConcentration,
+                        timeInMinutes: targetPoint.time
+                    };
+                    
+                    console.log('Advanced Result:', results.advanced);
+                }
+                
+            } catch (error) {
+                console.error('Advanced protocol test failed:', error);
+                results.advanced = { error: error.message };
+            }
+            
+            // Show final comparison
+            showComparison();
+        }
+        
+        // === FINAL COMPARISON ===
+        function showComparison() {
+            console.log('\n=== FINAL COMPARISON ===');
+            
+            if (results.induction && results.monitoring) {
+                const inductionEffect = results.induction.effectSiteConcentration;
+                const monitoringEffect = results.monitoring.effectSiteConcentration;
+                const advancedEffect = results.advanced?.effectSiteConcentration || 0;
+                
+                console.log('Effect-site Concentrations at ~2 minutes:');
+                console.log(`  Induction:  ${inductionEffect.toFixed(6)} μg/mL`);
+                console.log(`  Monitoring: ${monitoringEffect.toFixed(6)} μg/mL`);
+                console.log(`  Advanced:   ${advancedEffect.toFixed(6)} μg/mL`);
+                
+                const ratio1 = monitoringEffect / inductionEffect;
+                const ratio2 = advancedEffect / inductionEffect;
+                
+                console.log('Ratios vs Induction:');
+                console.log(`  Monitoring/Induction: ${ratio1.toFixed(3)}x`);
+                console.log(`  Advanced/Induction:   ${ratio2.toFixed(3)}x`);
+                
+                // Display in HTML
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = `
+                    <h2>Concentration Comparison at ${testTimeMinutes} minutes</h2>
+                    <table border="1" style="margin: 20px 0;">
+                        <tr><th>System</th><th>Plasma (μg/mL)</th><th>Effect-site (μg/mL)</th><th>Ratio vs Induction</th></tr>
+                        <tr><td>Real-time Induction</td><td>${results.induction.plasmaConcentration.toFixed(6)}</td><td>${inductionEffect.toFixed(6)}</td><td>1.000x</td></tr>
+                        <tr><td>Monitoring</td><td>${results.monitoring.plasmaConcentration.toFixed(6)}</td><td>${monitoringEffect.toFixed(6)}</td><td>${ratio1.toFixed(3)}x</td></tr>
+                        <tr><td>Advanced Protocol</td><td>${results.advanced?.plasmaConcentration?.toFixed(6) || 'Error'}</td><td>${advancedEffect.toFixed(6)}</td><td>${ratio2.toFixed(3)}x</td></tr>
+                    </table>
+                    
+                    <h3>PK Parameters Verification</h3>
+                    <p><strong>All systems using same ke0:</strong> ${results.induction ? 'PASS' : 'FAIL'}</p>
+                    <p><strong>Monitoring Issue:</strong> ${ratio1 > 1.5 || ratio1 < 0.67 ? 'MAJOR DISCREPANCY' : 'Minor difference'}</p>
+                    <p><strong>Advanced Issue:</strong> ${ratio2 > 1.5 || ratio2 < 0.67 ? 'MAJOR DISCREPANCY' : 'Minor difference'}</p>
+                `;
+                
+                // Key insight
+                if (Math.abs(ratio1 - 1) > 0.3) {
+                    console.log('\n🚨 MAJOR DISCREPANCY DETECTED in Monitoring Engine!');
+                    console.log('   This suggests different calculation methods or parameters.');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

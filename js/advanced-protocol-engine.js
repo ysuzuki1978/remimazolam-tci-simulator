@@ -10,6 +10,15 @@
  * - Real-time adjustment recommendations
  */
 
+// Import required modules for Node.js environment
+if (typeof require !== 'undefined') {
+    const { MasuiKe0Calculator } = require('../utils/masui-ke0-calculator.js');
+    const { ProtocolResult } = require('./models.js');
+    
+    global.MasuiKe0Calculator = MasuiKe0Calculator;
+    global.ProtocolResult = ProtocolResult;
+}
+
 class AdvancedProtocolEngine {
     constructor() {
         this.patient = null;
@@ -226,10 +235,14 @@ class AdvancedProtocolEngine {
             // Calculate plasma concentration
             const plasmaConc = state.a1 / this.pkParams.v1;
             
-            // Update effect site concentration
+            // Update effect site concentration using RK4
             if (i > 0) {
-                const dCedt = this.pkParams.ke0 * (plasmaConc - currentCe);
-                currentCe = currentCe + this.settings.timeStep * dCedt;
+                currentCe = this.updateEffectSiteConcentrationRK4(
+                    plasmaConc, 
+                    currentCe, 
+                    this.pkParams.ke0, 
+                    this.settings.timeStep
+                );
             }
             
             // Advanced threshold checking and dose adjustment
@@ -408,6 +421,26 @@ class AdvancedProtocolEngine {
     }
 
     /**
+     * RK4 calculation for effect-site concentration
+     */
+    updateEffectSiteConcentrationRK4(plasmaConc, currentCe, ke0, dt) {
+        // Differential equation: dCe/dt = ke0 * (Cp - Ce)
+        const f = (ce, cp) => ke0 * (cp - ce);
+        
+        // Calculate RK4 coefficients
+        const k1 = f(currentCe, plasmaConc);
+        const k2 = f(currentCe + 0.5 * dt * k1, plasmaConc);
+        const k3 = f(currentCe + 0.5 * dt * k2, plasmaConc);
+        const k4 = f(currentCe + dt * k3, plasmaConc);
+        
+        // Calculate new effect-site concentration
+        const newCe = currentCe + (dt / 6.0) * (k1 + 2*k2 + 2*k3 + k4);
+        
+        // Non-negative constraint
+        return Math.max(0, newCe);
+    }
+
+    /**
      * Simulate bolus + continuous infusion for specific time
      */
     simulateBolusAndContinuous(bolusDoseMg, continuousRate, targetTime) {
@@ -421,9 +454,13 @@ class AdvancedProtocolEngine {
         for (let i = 0; i < numSteps; i++) {
             const plasmaConc = state.a1 / this.pkParams.v1;
             
-            // Update effect site concentration
-            const dCedt = this.pkParams.ke0 * (plasmaConc - currentCe);
-            currentCe = currentCe + this.settings.timeStep * dCedt;
+            // Update effect site concentration using RK4
+            currentCe = this.updateEffectSiteConcentrationRK4(
+                plasmaConc, 
+                currentCe, 
+                this.pkParams.ke0, 
+                this.settings.timeStep
+            );
             
             // Update system state
             state = this.updateSystemStateRK4(state, infusionRateMgMin, this.settings.timeStep);
@@ -437,6 +474,9 @@ class AdvancedProtocolEngine {
      */
     calculateBolusInitialConcentration(bolusDoseMg) {
         const initialPlasmaConc = bolusDoseMg / this.pkParams.v1;
+        console.log(`=== AdvancedProtocolEngine BOLUS DEBUG ===`);
+        console.log(`Bolus dose: ${bolusDoseMg}mg, v1: ${this.pkParams.v1}`);
+        console.log(`Initial plasma concentration: ${initialPlasmaConc}`);
         return {
             a1: bolusDoseMg,
             a2: 0.0,
@@ -451,6 +491,20 @@ class AdvancedProtocolEngine {
      */
     updateSystemStateRK4(state, infusionRateMgMin, dt) {
         const { k10, k12, k21, k13, k31 } = this.pkParams;
+        
+        // DEBUG: Log key parameters for 2-minute timepoint investigation (need currentTime param)
+        // Note: This method is called from multiple places, adding debug when state suggests ~2min
+        if (state.a1 > 0 && state.a1 < 10) { // Rough estimation for debugging
+            const plasmaConc = state.a1 / this.pkParams.v1;
+            if (plasmaConc >= 0.5 && plasmaConc <= 0.6) { // Around expected 2min concentration
+                console.log('=== AdvancedProtocolEngine DEBUG (estimated t~2min) ===');
+                console.log('v1:', this.pkParams.v1);
+                console.log('k10:', k10, 'k12:', k12, 'k21:', k21, 'k13:', k13, 'k31:', k31);
+                console.log('Current state a1:', state.a1, 'a2:', state.a2, 'a3:', state.a3);
+                console.log('Infusion rate (mg/min):', infusionRateMgMin);
+                console.log('Plasma concentration:', plasmaConc);
+            }
+        }
         
         const derivatives = (s) => ({
             da1dt: infusionRateMgMin - (k10 + k12 + k13) * s.a1 + k21 * s.a2 + k31 * s.a3,

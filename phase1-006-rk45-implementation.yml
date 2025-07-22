@@ -1,0 +1,313 @@
+# phase1-006-rk45-implementation.yml
+task_id: PHASE1-006
+task_name: RK45 (Dormand-Prince) Implementation for Remimazolam
+priority: HIGH
+estimated_hours: 32-40
+
+implementation_details:
+  step1_dormand_prince_coefficients:
+    code: |
+      class DormandPrince45 {
+          constructor() {
+              // Butcher tableau for Dormand-Prince 5(4)
+              this.a = [
+                  [],
+                  [1/5],
+                  [3/40, 9/40],
+                  [44/45, -56/15, 32/9],
+                  [19372/6561, -25360/2187, 64448/6561, -212/729],
+                  [9017/3168, -355/33, 46732/5247, 49/176, -5103/18656],
+                  [35/384, 0, 500/1113, 125/192, -2187/6784, 11/84]
+              ];
+              
+              this.b4 = [35/384, 0, 500/1113, 125/192, -2187/6784, 11/84, 0];
+              this.b5 = [5179/57600, 0, 7571/16695, 393/640, -92097/339200, 187/2100, 1/40];
+              
+              this.c = [0, 1/5, 3/10, 4/5, 8/9, 1, 1];
+              
+              // Error calculation coefficients
+              this.e = this.b4.map((b4i, i) => b4i - this.b5[i]);
+          }
+          
+          step(odefun, t, y, h) {
+              const n = y.length;
+              const k = new Array(7);
+              
+              // Stage calculations
+              k[0] = odefun(t, y);
+              
+              for (let i = 1; i < 7; i++) {
+                  const yi = new Array(n);
+                  for (let j = 0; j < n; j++) {
+                      yi[j] = y[j];
+                      for (let l = 0; l < i; l++) {
+                          yi[j] += h * this.a[i][l] * k[l][j];
+                      }
+                  }
+                  k[i] = odefun(t + this.c[i] * h, yi);
+              }
+              
+              // 4th and 5th order solutions
+              const y4 = new Array(n);
+              const y5 = new Array(n);
+              const error = new Array(n);
+              
+              for (let i = 0; i < n; i++) {
+                  y4[i] = y[i];
+                  y5[i] = y[i];
+                  for (let j = 0; j < 7; j++) {
+                      y4[i] += h * this.b4[j] * k[j][i];
+                      y5[i] += h * this.b5[j] * k[j][i];
+                  }
+                  error[i] = y4[i] - y5[i];
+              }
+              
+              return { y_next: y5, error: error, stages: k };
+          }
+      }
+
+  step2_adaptive_controller:
+    code: |
+      class AdaptiveRK45Controller {
+          constructor(atol = 1e-8, rtol = 1e-6) {
+              this.atol = atol;  // Absolute tolerance
+              this.rtol = rtol;  // Relative tolerance
+              this.safety = 0.9; // Safety factor
+              this.minFactor = 0.2;  // Min step change
+              this.maxFactor = 10.0; // Max step change
+              this.hmin = 1e-6;  // Minimum step (0.00006 seconds)
+              this.hmax = 5.0;   // Maximum step (5 minutes)
+              
+              this.dp45 = new DormandPrince45();
+          }
+          
+          computeNewStepSize(h, error, y) {
+              // Compute error norm
+              let errorNorm = 0;
+              for (let i = 0; i < error.length; i++) {
+                  const scale = this.atol + this.rtol * Math.abs(y[i]);
+                  errorNorm += Math.pow(error[i] / scale, 2);
+              }
+              errorNorm = Math.sqrt(errorNorm / error.length);
+              
+              if (errorNorm < Number.EPSILON) {
+                  // Error is essentially zero
+                  return h * this.maxFactor;
+              }
+              
+              // Optimal step size formula
+              const factor = this.safety * Math.pow(1.0 / errorNorm, 1.0 / 5.0);
+              
+              // Apply constraints
+              const newFactor = Math.max(this.minFactor, 
+                                        Math.min(this.maxFactor, factor));
+              
+              return Math.max(this.hmin, Math.min(this.hmax, h * newFactor));
+          }
+          
+          adaptiveStep(odefun, t, y, h, tmax) {
+              let attempts = 0;
+              const maxAttempts = 10;
+              
+              while (attempts < maxAttempts) {
+                  // Don't step past tmax
+                  const hTry = Math.min(h, tmax - t);
+                  
+                  // Take a step
+                  const result = this.dp45.step(odefun, t, y, hTry);
+                  
+                  // Compute new step size
+                  const hNew = this.computeNewStepSize(hTry, result.error, y);
+                  
+                  // Check if step is accepted
+                  const errorNorm = this.computeErrorNorm(result.error, y);
+                  
+                  if (errorNorm <= 1.0) {
+                      // Accept step
+                      return {
+                          t_next: t + hTry,
+                          y_next: result.y_next,
+                          h_next: hNew,
+                          accepted: true,
+                          attempts: attempts + 1
+                      };
+                  }
+                  
+                  // Reject step, try with smaller h
+                  h = hNew;
+                  attempts++;
+              }
+              
+              // Failed to find acceptable step
+              throw new Error('RK45: Failed to find acceptable step size');
+          }
+      }
+
+  step3_pk_integration:
+    code: |
+      class RK45PKPDEngine {
+          constructor(patient, pkParams) {
+              this.patient = patient;
+              this.pkParams = pkParams;
+              
+              // Initialize adaptive controller
+              this.controller = new AdaptiveRK45Controller(
+                  1e-9,  // atol: 1 ng/mL precision
+                  1e-6   // rtol: 0.0001% relative error
+              );
+              
+              // Statistics
+              this.stats = {
+                  steps: 0,
+                  accepted: 0,
+                  rejected: 0,
+                  minStepSize: Infinity,
+                  maxStepSize: 0
+              };
+          }
+          
+          simulate(protocol, duration) {
+              // ODE system for 3-compartment + effect-site
+              const odefun = (t, state) => {
+                  const infusionRate = this.getInfusionRate(t, protocol);
+                  
+                  return [
+                      // da1/dt
+                      infusionRate - (this.pkParams.k10 + this.pkParams.k12 + 
+                                      this.pkParams.k13) * state[0] + 
+                      this.pkParams.k21 * state[1] + this.pkParams.k31 * state[2],
+                      
+                      // da2/dt
+                      this.pkParams.k12 * state[0] - this.pkParams.k21 * state[1],
+                      
+                      // da3/dt
+                      this.pkParams.k13 * state[0] - this.pkParams.k31 * state[2],
+                      
+                      // dCe/dt
+                      this.pkParams.ke0 * (state[0] / this.pkParams.V1 - state[3])
+                  ];
+              };
+              
+              // Initial conditions
+              const y0 = [0, 0, 0, 0];  // [a1, a2, a3, Ce]
+              
+              // Time points to save (for interpolation)
+              const savePoints = this.generateSavePoints(duration);
+              const results = [];
+              
+              // Adaptive integration
+              let t = 0;
+              let y = [...y0];
+              let h = 0.01;  // Initial step (0.6 seconds)
+              let saveIndex = 0;
+              
+              while (t < duration && saveIndex < savePoints.length) {
+                  // Take adaptive step
+                  const step = this.controller.adaptiveStep(
+                      odefun, t, y, h, duration
+                  );
+                  
+                  // Update statistics
+                  this.stats.steps++;
+                  if (step.accepted) {
+                      this.stats.accepted++;
+                      this.stats.minStepSize = Math.min(this.stats.minStepSize, 
+                                                        step.h_next);
+                      this.stats.maxStepSize = Math.max(this.stats.maxStepSize, 
+                                                        step.h_next);
+                  } else {
+                      this.stats.rejected++;
+                  }
+                  
+                  // Interpolate to save points
+                  while (saveIndex < savePoints.length && 
+                         savePoints[saveIndex] <= step.t_next) {
+                      const tSave = savePoints[saveIndex];
+                      const ySave = this.hermiteInterpolate(
+                          t, y, step.t_next, step.y_next, tSave
+                      );
+                      
+                      results.push({
+                          time: tSave,
+                          plasmaConc: ySave[0] / this.pkParams.V1,
+                          effectSiteConc: ySave[3],
+                          compartments: [ySave[0], ySave[1], ySave[2]],
+                          stepSize: step.h_next
+                      });
+                      
+                      saveIndex++;
+                  }
+                  
+                  // Update state
+                  t = step.t_next;
+                  y = step.y_next;
+                  h = step.h_next;
+              }
+              
+              return { results, statistics: this.stats };
+          }
+      }
+
+  step4_comparison_framework:
+    comparison_setup: |
+      // Add RK45 to comparison framework
+      class EnhancedCalculationComparator {
+          constructor() {
+              this.methods = {
+                  euler_original: {
+                      name: "Euler (Current)",
+                      engine: "euler",
+                      settings: { timeStep: 0.1 }
+                  },
+                  rk4_fixed: {
+                      name: "RK4 (Fixed Step)",
+                      engine: "rk4",
+                      settings: { timeStep: 0.1 }
+                  },
+                  rk45_adaptive: {
+                      name: "RK45 (Dormand-Prince)",
+                      engine: "rk45",
+                      settings: { 
+                          atol: 1e-9,
+                          rtol: 1e-6
+                      }
+                  }
+              };
+          }
+      }
+
+performance_expectations:
+  computational_efficiency:
+    bolus_phase:
+      rk4_steps: ~50 (dt=0.1)
+      rk45_steps: ~30-40 (adaptive)
+      time_saved: "20-40%"
+      
+    maintenance_phase:
+      rk4_steps: ~3600 (dt=0.1, 6 hours)
+      rk45_steps: ~200-400 (adaptive)
+      time_saved: "80-90%"
+      
+  accuracy_comparison:
+    vs_rk4_fine: "Similar accuracy with 10x fewer steps"
+    vs_euler: "100x more accurate"
+    error_control: "Guaranteed to meet tolerance"
+
+clinical_benefits:
+  awakening_prediction:
+    - Automatic refinement near critical concentrations
+    - Error bounds on predictions
+    - Consistent accuracy across all scenarios
+    
+  long_surgeries:
+    - Efficient handling of steady states
+    - No accumulated error over time
+    - Adaptive to infusion rate changes
+
+implementation_priority:
+  recommendation: "HIGH - Implement after RK4"
+  rationale:
+    - Significant efficiency gains
+    - Built-in error control
+    - Handles all clinical scenarios well
+    - No stiffness issues with remimazolam
