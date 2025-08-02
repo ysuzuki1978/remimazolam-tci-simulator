@@ -440,12 +440,33 @@ class MonitoringEngine {
         let infusionIndex = 0;
         let currentInfusionRate = 0.0;
         
-        // Use RK4 for now due to LSODA stability issues
-        // TODO: Fix LSODA implementation in future version
-        console.log('Using RK4 integration for monitoring simulation');
+        // LSODA implementation has been enhanced with medical error logging and stability improvements
+        // Try LSODA first, fallback to RK4 if needed
+        console.log('Attempting LSODA integration for monitoring simulation with RK4 fallback');
         console.log('Bolus events to process:', bolusEvents);
         console.log('Infusion events to process:', infusionEvents);
-        return this.calculatePlasmaConcentrationsRK4(times, bolusEvents, infusionEvents);
+        
+        // Try LSODA implementation
+        if (typeof PKLSODASolver !== 'undefined') {
+            try {
+                console.log('Using enhanced LSODA solver for monitoring');
+                return this.calculatePlasmaConcentrationsLSODA(times, bolusEvents, infusionEvents);
+            } catch (lsodaError) {
+                console.warn('LSODA failed, falling back to RK4:', lsodaError.message);
+                if (typeof MedicalErrorLog !== 'undefined') {
+                    MedicalErrorLog.logNumericalError(
+                        ErrorSource.MONITORING_ENGINE,
+                        'LSODA monitoring calculation failed, using RK4 fallback: ' + lsodaError.message,
+                        { algorithm: 'LSODA → RK4', fallbackApplied: true },
+                        { originalError: lsodaError.message }
+                    );
+                }
+                return this.calculatePlasmaConcentrationsRK4(times, bolusEvents, infusionEvents);
+            }
+        } else {
+            console.log('LSODA solver not available, using RK4');
+            return this.calculatePlasmaConcentrationsRK4(times, bolusEvents, infusionEvents);
+        }
         
         // LSODA implementation commented out temporarily
         /*
@@ -513,6 +534,22 @@ class MonitoringEngine {
             };
         } catch (error) {
             console.warn('LSODA failed, falling back to RK4:', error);
+            
+            // Log fallback application for error tracking
+            if (typeof MedicalErrorLog !== 'undefined') {
+                MedicalErrorLog.logNumericalError(
+                    ErrorSource.MONITORING_ENGINE,
+                    'LSODA monitoring failed, RK4 fallback applied: ' + error.message,
+                    { 
+                        algorithm: 'LSODA → RK4', 
+                        fallbackApplied: true,
+                        bolusEvents: bolusEvents.length,
+                        timePoints: times.length
+                    },
+                    { originalError: error.message, resolved: true }
+                );
+            }
+            
             return this.calculatePlasmaConcentrationsRK4(times, bolusEvents, infusionEvents);
         }
     }
