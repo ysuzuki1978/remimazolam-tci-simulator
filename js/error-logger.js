@@ -1,6 +1,6 @@
 /**
  * Structured Error Logging System for Medical Calculations
- * Remimazolam TCI TIVA V1.0.0
+ * Remimazolam TCI TIVA V1.3.0
  * 
  * Provides comprehensive error tracking, categorization, and reporting
  * for medical calculation engines with contextual information.

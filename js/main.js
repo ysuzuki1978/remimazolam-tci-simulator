@@ -32,7 +32,7 @@ class MainApplicationController {
     }
 
     initialize() {
-        console.log('Initializing Remimazolam TCI TIVA V1.1.1 with Advanced Step-Down Protocol and Mobile-Optimized ±Button Controls');
+        console.log('Initializing Remimazolam TCI TIVA V1.3.0 with Advanced Step-Down Protocol and Mobile-Optimized ±Button Controls');
         
         // Hide loading screen after short delay
         setTimeout(() => {

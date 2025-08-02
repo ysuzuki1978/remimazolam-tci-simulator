@@ -1,8 +1,8 @@
-// Service Worker for Remimazolam TCI TIVA V1.2.1
+// Service Worker for Remimazolam TCI TIVA V1.3.0
 // PWA offline functionality and caching
 
-const CACHE_NAME = 'remimazolam-tci-v1.2.1';
-const VERSION = '1.2.1';
+const CACHE_NAME = 'remimazolam-tci-v1.3.0';
+const VERSION = '1.3.0';
 
 // Files to cache for offline use
 const urlsToCache = [

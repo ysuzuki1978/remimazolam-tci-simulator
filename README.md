@@ -1,4 +1,4 @@
-# Remimazolam TCI TIVA V1.2.1: Effect-Site Concentration Prediction Application
+# Remimazolam TCI TIVA V1.3.0: Effect-Site Concentration Prediction Application
 
 ## Overview
 
@@ -18,7 +18,7 @@ This Progressive Web Application implements a Target-Controlled Infusion (TCI) s
 - **Step-Down Protocol Optimization**: Automated protocol adjustment with safety thresholds
 - **Comprehensive Monitoring**: Six-point evaluation system for protocol performance
 - **Progressive Web App**: Offline capability with responsive design
-- **🔧 Unified RK4 Calculations (V1.2.1)**: Standardized numerical methods across all calculation engines for consistent results
+- **🛠️ Complete Numerical Precision Fix (V1.3.0)**: Fixed negative ke₀ calculations, LSODA step size failures, and bolus-only monitoring issues
 
 ## Technical Implementation
 
