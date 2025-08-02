@@ -105,6 +105,28 @@ class MainApplicationController {
         document.getElementById('patientForm').addEventListener('submit', (e) => {
             this.savePatientData(e);
         });
+
+        // Error diagnostics
+        document.getElementById('errorDiagnosticsBtn').addEventListener('click', () => {
+            if (window.errorDisplayInterface) {
+                window.errorDisplayInterface.toggle();
+            }
+        });
+
+        // Error indicator click
+        document.getElementById('errorIndicator').addEventListener('click', () => {
+            if (window.errorDisplayInterface) {
+                window.errorDisplayInterface.show();
+            }
+        });
+
+        // Test error reporting (development only)
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            // Add test error button for development
+            setTimeout(() => {
+                this.addTestErrorButton();
+            }, 1000);
+        }
         
         // Patient form sliders
         
@@ -1001,6 +1023,76 @@ class MainApplicationController {
     updateAllPanelStates() {
         this.updateInductionControls();
         this.updateMonitoringDisplay();
+    }
+
+    // Test error reporting functionality (development only)
+    addTestErrorButton() {
+        if (typeof MedicalErrorLog === 'undefined') return;
+
+        const testButton = document.createElement('button');
+        testButton.textContent = '⚠️ Test Errors';
+        testButton.className = 'btn btn-warning';
+        testButton.style.position = 'fixed';
+        testButton.style.bottom = '10px';
+        testButton.style.left = '10px';
+        testButton.style.zIndex = '9999';
+        testButton.style.fontSize = '12px';
+        testButton.style.padding = '4px 8px';
+
+        testButton.addEventListener('click', () => {
+            this.generateTestErrors();
+        });
+
+        document.body.appendChild(testButton);
+    }
+
+    generateTestErrors() {
+        if (typeof MedicalErrorLog === 'undefined') return;
+
+        // Test validation error
+        MedicalErrorLog.logValidationError(
+            ErrorSource.MAIN_CONTROLLER,
+            'Test validation error: Invalid patient age',
+            { age: 150, weight: 70, height: 170 },
+            { ageRange: '18-100 years', validationRule: 'Age bounds check' }
+        );
+
+        // Test pharmacokinetic error
+        MedicalErrorLog.logPKError(
+            ErrorSource.MASUI_KE0_CALCULATOR,
+            'Test PK calculation error: Failed to solve cubic equation',
+            { id: 'TEST_PATIENT', age: 45, weight: 70, height: 170, sex: 0, asaPS: 0 },
+            { calculationType: 'ke0 numerical solution', algorithm: 'Cubic solver' }
+        );
+
+        // Test numerical error
+        MedicalErrorLog.logNumericalError(
+            ErrorSource.LSODA_SOLVER,
+            'Test numerical integration error: Convergence failure',
+            { name: 'LSODA', parameters: { rtol: 1e-6, atol: 1e-12 } },
+            { converged: false, iterations: 500, reason: 'Max iterations exceeded' }
+        );
+
+        // Test safety error
+        MedicalErrorLog.logSafetyError(
+            ErrorSource.PROTOCOL_ENGINE,
+            'Test safety threshold violation: Target concentration too high',
+            { safeRange: '0.1-3.0 μg/mL', threshold: 'Clinical safety bounds' },
+            { targetConcentration: 5.0, calculatedDose: 25.0 }
+        );
+
+        // Test system error
+        MedicalErrorLog.logError(
+            ErrorSeverity.MEDIUM,
+            ErrorCategory.SYSTEM,
+            ErrorSource.MAIN_CONTROLLER,
+            'Test system error: Chart rendering failed',
+            {},
+            { component: 'Chart.js', error: 'Canvas context lost', fallback: 'Table display' }
+        );
+
+        console.log('Test errors generated successfully');
+        alert('Test errors have been generated. Check the Error Diagnostics panel.');
     }
 }
 

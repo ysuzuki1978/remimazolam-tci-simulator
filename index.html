@@ -75,6 +75,10 @@
             <div class="header-content">
                 <h1>Remimazolam TCI TIVA <span class="version">V1.1.1</span></h1>
                 <p>Predictive Control Protocol - Effect-site Concentration Target Controlled Infusion System</p>
+                <div class="header-controls">
+                    <button id="errorDiagnosticsBtn" class="btn btn-secondary">🔍 Error Diagnostics</button>
+                    <div id="errorIndicator" class="error-indicator" style="display: none;">0</div>
+                </div>
             </div>
         </header>
 
@@ -440,6 +444,7 @@
     </div>
 
     <!-- JavaScript Modules -->
+    <script src="js/error-logger.js"></script>
     <script src="utils/lsoda.js"></script>
     <script src="utils/masui-ke0-calculator.js"></script>
     <script src="utils/vhac.js"></script>
@@ -449,6 +454,8 @@
     <script src="js/advanced-protocol-engine.js"></script>
     <script src="js/enhanced-protocol-engine.js"></script>
     <script src="js/monitoring-engine.js"></script>
+    <script src="js/error-display.js"></script>
+    <script src="test/lsoda-validation-test.js"></script>
     <script src="js/main.js"></script>
 
     <!-- Service Worker Registration -->

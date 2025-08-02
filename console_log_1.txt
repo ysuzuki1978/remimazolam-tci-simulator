@@ -1,0 +1,218 @@
+Service Worker not available (file:// protocol or browser not supported)
+main.js:35 Initializing Remimazolam TCI TIVA V1.1.1 with Advanced Step-Down Protocol and Mobile-Optimized ±Button Controls
+protocol-engine.js:38 Calculating PK parameters for protocol optimization
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=50, TBW=70, height=170, sex=0, ASAPS=0
+masui-ke0-calculator.js:330 PK Parameters: Object
+masui-ke0-calculator.js:334 Rate Constants: Object
+masui-ke0-calculator.js:338 Plasma Coefficients: Object
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.22065
+masui-ke0-calculator.js:375 Ke0 (Regression): 0.19523
+advanced-protocol-engine.js:44 Calculating PK parameters with advanced Masui Ke0 model
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=50, TBW=70, height=170, sex=0, ASAPS=0
+masui-ke0-calculator.js:330 PK Parameters: Object
+masui-ke0-calculator.js:334 Rate Constants: Object
+masui-ke0-calculator.js:338 Plasma Coefficients: Object
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.22065
+masui-ke0-calculator.js:375 Ke0 (Regression): 0.19523
+advanced-protocol-engine.js:35 Advanced Protocol Engine: Patient set Patient-2025-08-02
+enhanced-protocol-engine.js:41 Calculating PK parameters for enhanced protocol optimization
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=50, TBW=70, height=170, sex=0, ASAPS=0
+masui-ke0-calculator.js:330 PK Parameters: Object
+masui-ke0-calculator.js:334 Rate Constants: Object
+masui-ke0-calculator.js:338 Plasma Coefficients: Object
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.22065
+masui-ke0-calculator.js:375 Ke0 (Regression): 0.19523
+monitoring-engine.js:100 Calculating PK parameters for monitoring with Masui Ke0 model
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=50, TBW=70, height=170, sex=0, ASAPS=0
+masui-ke0-calculator.js:330 PK Parameters: Object
+masui-ke0-calculator.js:334 Rate Constants: Object
+masui-ke0-calculator.js:338 Plasma Coefficients: Object
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.22065
+masui-ke0-calculator.js:375 Ke0 (Regression): 0.19523
+monitoring-engine.js:68 Patient set for monitoring engine: Patient-2025-08-02
+main.js:78 Default patient initialized: Patient-2025-08-02
+main.js:55 Application initialized successfully
+images/icon-32.png:1  Failed to load resource: net::ERR_FILE_NOT_FOUNDUnderstand this error
+index.html:1 Access to internal resource at 'file:///Users/ysuzuki/Dropbox/claude_work/remimazolam_TCI_TIVA_V1_0_0/manifest.json' from origin 'null' has been blocked by CORS policy: Cross origin requests are only supported for protocol schemes: chrome, chrome-extension, chrome-untrusted, data, http, https, isolated-app.Understand this error
+protocol-engine.js:38 Calculating PK parameters for protocol optimization
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=55, TBW=71, height=170, sex=0, ASAPS=1
+masui-ke0-calculator.js:330 PK Parameters: {IBW: 65.564, ABW: 67.7384, V1: 3.5932553937592866, V2: 11.373609509658248, V3: 27.687190300148586, …}
+masui-ke0-calculator.js:334 Rate Constants: {k10: 0.23659043317447007, k12: 0.3076234946712968, k13: 0.11214274669380908, k21: 0.09718724566163976, k31: 0.014553933608292076}
+masui-ke0-calculator.js:338 Plasma Coefficients: {alpha: 0.7076831767915042, beta: 0.051174134616183364, gamma: 0.009240542401820179, A: 0.9228381547631345, B: 0.06120678134505566, …}
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.24620
+masui-ke0-calculator.js:375 Ke0 (Regression): 0.22068
+advanced-protocol-engine.js:44 Calculating PK parameters with advanced Masui Ke0 model
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=55, TBW=71, height=170, sex=0, ASAPS=1
+masui-ke0-calculator.js:330 PK Parameters: {IBW: 65.564, ABW: 67.7384, V1: 3.5932553937592866, V2: 11.373609509658248, V3: 27.687190300148586, …}
+masui-ke0-calculator.js:334 Rate Constants: {k10: 0.23659043317447007, k12: 0.3076234946712968, k13: 0.11214274669380908, k21: 0.09718724566163976, k31: 0.014553933608292076}
+masui-ke0-calculator.js:338 Plasma Coefficients: {alpha: 0.7076831767915042, beta: 0.051174134616183364, gamma: 0.009240542401820179, A: 0.9228381547631345, B: 0.06120678134505566, …}
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.24620
+masui-ke0-calculator.js:375 Ke0 (Regression): 0.22068
+advanced-protocol-engine.js:35 Advanced Protocol Engine: Patient set Patient-2025-08-02
+enhanced-protocol-engine.js:41 Calculating PK parameters for enhanced protocol optimization
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=55, TBW=71, height=170, sex=0, ASAPS=1
+masui-ke0-calculator.js:330 PK Parameters: {IBW: 65.564, ABW: 67.7384, V1: 3.5932553937592866, V2: 11.373609509658248, V3: 27.687190300148586, …}
+masui-ke0-calculator.js:334 Rate Constants: {k10: 0.23659043317447007, k12: 0.3076234946712968, k13: 0.11214274669380908, k21: 0.09718724566163976, k31: 0.014553933608292076}
+masui-ke0-calculator.js:338 Plasma Coefficients: {alpha: 0.7076831767915042, beta: 0.051174134616183364, gamma: 0.009240542401820179, A: 0.9228381547631345, B: 0.06120678134505566, …}
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.24620
+masui-ke0-calculator.js:375 Ke0 (Regression): 0.22068
+monitoring-engine.js:100 Calculating PK parameters for monitoring with Masui Ke0 model
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=55, TBW=71, height=170, sex=0, ASAPS=1
+masui-ke0-calculator.js:330 PK Parameters: {IBW: 65.564, ABW: 67.7384, V1: 3.5932553937592866, V2: 11.373609509658248, V3: 27.687190300148586, …}
+masui-ke0-calculator.js:334 Rate Constants: {k10: 0.23659043317447007, k12: 0.3076234946712968, k13: 0.11214274669380908, k21: 0.09718724566163976, k31: 0.014553933608292076}
+masui-ke0-calculator.js:338 Plasma Coefficients: {alpha: 0.7076831767915042, beta: 0.051174134616183364, gamma: 0.009240542401820179, A: 0.9228381547631345, B: 0.06120678134505566, …}
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.24620
+masui-ke0-calculator.js:375 Ke0 (Regression): 0.22068
+monitoring-engine.js:68 Patient set for monitoring engine: Patient-2025-08-02
+main.js:421 Patient data updated: Patient-2025-08-02
+induction-engine.js:61 Starting induction simulation: {bolusDose: 7, continuousDose: 1}
+induction-engine.js:228 Calculating PK parameters with Masui Ke0 model
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=55, TBW=71, height=170, sex=0, ASAPS=1
+masui-ke0-calculator.js:330 PK Parameters: {IBW: 65.564, ABW: 67.7384, V1: 3.5932553937592866, V2: 11.373609509658248, V3: 27.687190300148586, …}
+masui-ke0-calculator.js:334 Rate Constants: {k10: 0.23659043317447007, k12: 0.3076234946712968, k13: 0.11214274669380908, k21: 0.09718724566163976, k31: 0.014553933608292076}
+masui-ke0-calculator.js:338 Plasma Coefficients: {alpha: 0.7076831767915042, beta: 0.051174134616183364, gamma: 0.009240542401820179, A: 0.9228381547631345, B: 0.06120678134505566, …}
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.24620
+masui-ke0-calculator.js:375 Ke0 (Regression): 0.22068
+induction-engine.js:76 Using LSODA integration method
+main.js:469 Induction started
+error-logger.js:386 [HIGH] NUMERICAL - LSODASolver: Step size below minimum threshold
+logToConsole @ error-logger.js:386
+logError @ error-logger.js:161
+logNumericalError @ error-logger.js:224
+step @ lsoda.js:293
+integrate @ lsoda.js:134
+updateSimulationLSODA @ induction-engine.js:198
+updateSimulation @ induction-engine.js:133
+(anonymous) @ induction-engine.js:83
+setInterval
+start @ induction-engine.js:82
+startInduction @ main.js:466
+(anonymous) @ main.js:135Understand this error
+induction-engine.js:221 LSODA integration failed, falling back to Euler method: Error: LSODA failed at t = 0.01668333333333333: Step size too small: 1.6666666666666677e-11 at time 0.016683333499999998
+    at LSODA.integrate (lsoda.js:137:27)
+    at InductionEngine.updateSimulationLSODA (induction-engine.js:198:45)
+    at InductionEngine.updateSimulation (induction-engine.js:133:18)
+    at induction-engine.js:83:18
+updateSimulationLSODA @ induction-engine.js:221
+updateSimulation @ induction-engine.js:133
+(anonymous) @ induction-engine.js:83
+setInterval
+start @ induction-engine.js:82
+startInduction @ main.js:466
+(anonymous) @ main.js:135Understand this warning
+induction-engine.js:94 Stopping induction simulation
+main.js:477 Induction stopped
+enhanced-protocol-engine.js:88 === Enhanced Protocol Optimization ===
+enhanced-protocol-engine.js:89 Bolus dose: 7 mg
+enhanced-protocol-engine.js:90 Target concentration: 1 μg/mL
+enhanced-protocol-engine.js:91 Target time: 20 minutes
+enhanced-protocol-engine.js:110 Converged after 8 iterations
+enhanced-protocol-engine.js:123 Optimal continuous rate: 1.275 mg/kg/hr
+enhanced-protocol-engine.js:124 Predicted concentration: 1.0027 μg/mL
+enhanced-protocol-engine.js:125 Error: 0.0027 μg/mL (0.27%)
+enhanced-protocol-engine.js:138 === Predictive Protocol Generation ===
+enhanced-protocol-engine.js:191 5.0min: Predictive adjustment Ce=0.721 → Rate 1.28 → 1.40 mg/kg/hr
+enhanced-protocol-engine.js:191 10.0min: Predictive adjustment Ce=0.873 → Rate 1.40 → 1.26 mg/kg/hr
+enhanced-protocol-engine.js:191 15.0min: Predictive adjustment Ce=0.949 → Rate 1.26 → 1.14 mg/kg/hr
+enhanced-protocol-engine.js:191 20.0min: Predictive adjustment Ce=0.975 → Rate 1.14 → 1.02 mg/kg/hr
+enhanced-protocol-engine.js:191 25.0min: Predictive adjustment Ce=0.974 → Rate 1.02 → 0.92 mg/kg/hr
+enhanced-protocol-engine.js:191 30.0min: Predictive adjustment Ce=0.956 → Rate 0.92 → 0.83 mg/kg/hr
+enhanced-protocol-engine.js:191 65.0min: Predictive adjustment Ce=0.945 → Rate 0.83 → 0.75 mg/kg/hr
+enhanced-protocol-engine.js:191 130.0min: Predictive adjustment Ce=0.948 → Rate 0.75 → 0.67 mg/kg/hr
+enhanced-protocol-engine.js:241 
+enhanced-protocol-engine.js:242 === Enhanced Performance Evaluation ===
+enhanced-protocol-engine.js:243 Final effect site concentration: 0.907 μg/mL
+enhanced-protocol-engine.js:244 Target accuracy: 100.0%
+enhanced-protocol-engine.js:245 Time in therapeutic range: 0.0%
+enhanced-protocol-engine.js:246 Total adjustments: 8
+enhanced-protocol-engine.js:247 Stability index: 22.4/100
+enhanced-protocol-engine.js:248 Overall score: 76.7/100
+main.js:517 Advanced Protocol optimization completed
+monitoring-engine.js:78 Dose event added: DoseEvent {timeInMinutes: 0, bolusMg: 10, continuousMgKgHr: 0}
+main.js:458 Dose event added: DoseEvent {timeInMinutes: 0, bolusMg: 10, continuousMgKgHr: 0}
+monitoring-engine.js:142 Running monitoring simulation with VHAC + RK4 engine
+monitoring-engine.js:253 Attempting LSODA integration for monitoring simulation with RK4 fallback
+monitoring-engine.js:254 Bolus events to process: [{…}]
+monitoring-engine.js:255 Infusion events to process: [{…}]
+monitoring-engine.js:260 Using enhanced LSODA solver for monitoring
+monitoring-engine.js:316 Debug LSODA inputs:
+monitoring-engine.js:317 Times length: 12000 First/Last: 0 119.99000000002448
+monitoring-engine.js:318 Infusion rates length: 12000 First few: (3) [0, 0, 0]
+monitoring-engine.js:319 Bolus doses: [{…}]
+monitoring-engine.js:320 PK params: {k10: 0.23659043317447007, k12: 0.3076234946712968, k21: 0.09718724566163976, k13: 0.11214274669380908, k31: 0.014553933608292076}
+monitoring-engine.js:334 LSODA simulation completed successfully
+monitoring-engine.js:335 LSODA result length: 12000
+monitoring-engine.js:336 First few states: (3) [Array(3), Array(3), Array(3)]
+monitoring-engine.js:337 First few concentrations: (3) [0, 0, 0]
+monitoring-engine.js:338 Max concentration: 0
+monitoring-engine.js:203 Monitoring simulation completed
+monitoring-engine.js:204 Max plasma concentration: 0.000 μg/mL
+monitoring-engine.js:205 Max effect site concentration: 0.000 μg/mL
+main.js:530 Monitoring simulation completed
+monitoring-engine.js:78 Dose event added: DoseEvent {timeInMinutes: 0, bolusMg: 10, continuousMgKgHr: 1}
+main.js:458 Dose event added: DoseEvent {timeInMinutes: 0, bolusMg: 10, continuousMgKgHr: 1}
+monitoring-engine.js:142 Running monitoring simulation with VHAC + RK4 engine
+monitoring-engine.js:253 Attempting LSODA integration for monitoring simulation with RK4 fallback
+monitoring-engine.js:254 Bolus events to process: (2) [{…}, {…}]
+monitoring-engine.js:255 Infusion events to process: (2) [{…}, {…}]
+monitoring-engine.js:260 Using enhanced LSODA solver for monitoring
+monitoring-engine.js:316 Debug LSODA inputs:
+monitoring-engine.js:317 Times length: 12000 First/Last: 0 119.99000000002448
+monitoring-engine.js:318 Infusion rates length: 12000 First few: (3) [1.1833333333333333, 1.1833333333333333, 1.1833333333333333]
+monitoring-engine.js:319 Bolus doses: (2) [{…}, {…}]
+monitoring-engine.js:320 PK params: {k10: 0.23659043317447007, k12: 0.3076234946712968, k21: 0.09718724566163976, k13: 0.11214274669380908, k31: 0.014553933608292076}
+error-logger.js:386 [HIGH] NUMERICAL - LSODASolver: Step size below minimum threshold
+logToConsole @ error-logger.js:386
+logError @ error-logger.js:161
+logNumericalError @ error-logger.js:224
+step @ lsoda.js:293
+integrate @ lsoda.js:134
+solve3Compartment @ lsoda.js:559
+calculatePlasmaConcentrationsLSODA @ monitoring-engine.js:322
+calculatePlasmaConcentrationsAdvanced @ monitoring-engine.js:261
+runSimulation @ monitoring-engine.js:156
+runMonitoringSimulation @ main.js:527
+(anonymous) @ main.js:161Understand this error
+error-logger.js:386 [HIGH] NUMERICAL - LSODASolver: LSODA final integration error: LSODA failed at t = 0: Step size too small: 1.0000000000000006e-11 at time 1.0000000000000006e-10
+logToConsole @ error-logger.js:386
+logError @ error-logger.js:161
+logNumericalError @ error-logger.js:224
+solve3Compartment @ lsoda.js:587
+calculatePlasmaConcentrationsLSODA @ monitoring-engine.js:322
+calculatePlasmaConcentrationsAdvanced @ monitoring-engine.js:261
+runSimulation @ monitoring-engine.js:156
+runMonitoringSimulation @ main.js:527
+(anonymous) @ main.js:161Understand this error
+monitoring-engine.js:344 LSODA failed, falling back to RK4: Error: LSODA failed at t = 0: Step size too small: 1.0000000000000006e-11 at time 1.0000000000000006e-10
+    at LSODA.integrate (lsoda.js:137:27)
+    at PKLSODASolver.solve3Compartment (lsoda.js:559:52)
+    at MonitoringEngine.calculatePlasmaConcentrationsLSODA (monitoring-engine.js:322:35)
+    at MonitoringEngine.calculatePlasmaConcentrationsAdvanced (monitoring-engine.js:261:29)
+    at MonitoringEngine.runSimulation (monitoring-engine.js:156:35)
+    at MainApplicationController.runMonitoringSimulation (main.js:527:50)
+    at HTMLButtonElement.<anonymous> (main.js:161:18)
+calculatePlasmaConcentrationsLSODA @ monitoring-engine.js:344
+calculatePlasmaConcentrationsAdvanced @ monitoring-engine.js:261
+runSimulation @ monitoring-engine.js:156
+runMonitoringSimulation @ main.js:527
+(anonymous) @ main.js:161Understand this warning
+monitoring-engine.js:357 RK4 starting with timeStep: 0.01 initial state: SystemState {a1: 0, a2: 0, a3: 0, ce: 0}
+2monitoring-engine.js:370 Applied bolus: 10mg at time 0 (bolus time: 0)
+monitoring-engine.js:392 RK4 simulation completed
+monitoring-engine.js:393 RK4 result length: 12000
+monitoring-engine.js:394 First few concentrations: (5) [5.565983435170154, 5.532861520081744, 5.4999736623533755, 5.4673182113280685, 5.434893527989077]
+monitoring-engine.js:395 Max concentration: 5.565983435170154
+monitoring-engine.js:396 Final concentration: 1.233509167813234
+monitoring-engine.js:203 Monitoring simulation completed
+monitoring-engine.js:204 Max plasma concentration: 5.566 μg/mL
+monitoring-engine.js:205 Max effect site concentration: 1.356 μg/mL
+main.js:530 Monitoring simulation completed

@@ -47,6 +47,24 @@ class ProtocolEngine {
         );
         
         if (!result.success) {
+            if (typeof MedicalErrorLog !== 'undefined') {
+                MedicalErrorLog.logPKError(
+                    ErrorSource.PROTOCOL_ENGINE,
+                    'Failed to calculate PK parameters: ' + result.error,
+                    {
+                        id: patient.id,
+                        age: patient.age,
+                        weight: patient.weight,
+                        height: patient.height,
+                        sex: patient.sex,
+                        asaPS: patient.asaPS
+                    },
+                    {
+                        calculationType: 'PK parameter calculation',
+                        engineType: 'Protocol Engine'
+                    }
+                );
+            }
             throw new Error('Failed to calculate PK parameters: ' + result.error);
         }
         
@@ -137,10 +155,29 @@ class ProtocolEngine {
 
         console.log(`=== Complete Protocol Generation ===`);
         
-        // Always use RK4 for now due to LSODA stability issues
-        // TODO: Fix LSODA implementation in future version
-        console.log('Using RK4 integration for protocol generation');
-        return this.generateCompleteProtocolRK4(bolusDoseMg, initialContinuousRate);
+        // Enhanced LSODA implementation with medical error logging - try LSODA first
+        console.log('Attempting LSODA integration for protocol generation with RK4 fallback');
+        
+        if (typeof PKLSODASolver !== 'undefined') {
+            try {
+                console.log('Using enhanced LSODA solver for protocol generation');
+                return this.generateCompleteProtocolLSODA(bolusDoseMg, initialContinuousRate);
+            } catch (lsodaError) {
+                console.warn('LSODA protocol generation failed, falling back to RK4:', lsodaError.message);
+                if (typeof MedicalErrorLog !== 'undefined') {
+                    MedicalErrorLog.logNumericalError(
+                        ErrorSource.PROTOCOL_ENGINE,
+                        'LSODA protocol generation failed, using RK4 fallback: ' + lsodaError.message,
+                        { algorithm: 'LSODA → RK4', fallbackApplied: true },
+                        { originalError: lsodaError.message }
+                    );
+                }
+                return this.generateCompleteProtocolRK4(bolusDoseMg, initialContinuousRate);
+            }
+        } else {
+            console.log('LSODA solver not available, using RK4');
+            return this.generateCompleteProtocolRK4(bolusDoseMg, initialContinuousRate);
+        }
         
         // LSODA implementation commented out temporarily
         /*
@@ -384,10 +421,29 @@ class ProtocolEngine {
      * Simulate bolus + continuous infusion for specific time using LSODA
      */
     simulateBolusAndContinuous(bolusDoseMg, continuousRate, targetTime) {
-        // Always use RK4 for now due to LSODA stability issues
-        // TODO: Fix LSODA implementation in future version
-        console.log('Using RK4 integration for protocol optimization');
-        return this.simulateBolusAndContinuousRK4(bolusDoseMg, continuousRate, targetTime);
+        // Enhanced LSODA implementation - try LSODA first with RK4 fallback
+        console.log('Attempting LSODA integration for protocol optimization with RK4 fallback');
+        
+        if (typeof PKLSODASolver !== 'undefined') {
+            try {
+                console.log('Using enhanced LSODA solver for protocol optimization');
+                return this.simulateBolusAndContinuousLSODA(bolusDoseMg, continuousRate, targetTime);
+            } catch (lsodaError) {
+                console.warn('LSODA optimization failed, falling back to RK4:', lsodaError.message);
+                if (typeof MedicalErrorLog !== 'undefined') {
+                    MedicalErrorLog.logNumericalError(
+                        ErrorSource.PROTOCOL_ENGINE,
+                        'LSODA protocol optimization failed, using RK4 fallback: ' + lsodaError.message,
+                        { algorithm: 'LSODA → RK4', fallbackApplied: true },
+                        { originalError: lsodaError.message }
+                    );
+                }
+                return this.simulateBolusAndContinuousRK4(bolusDoseMg, continuousRate, targetTime);
+            }
+        } else {
+            console.log('LSODA solver not available, using RK4');
+            return this.simulateBolusAndContinuousRK4(bolusDoseMg, continuousRate, targetTime);
+        }
         
         // LSODA implementation commented out temporarily
         /*

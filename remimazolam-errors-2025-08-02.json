@@ -1,0 +1,122 @@
+{
+  "exportTimestamp": "2025-08-02T05:27:21.835Z",
+  "totalErrors": 4,
+  "errors": [
+    {
+      "id": "ERR_1754112391882_mlxyfgj5t",
+      "timestamp": "2025-08-02T05:26:31.882Z",
+      "severity": "HIGH",
+      "category": "NUMERICAL",
+      "source": "LSODASolver",
+      "message": "Step size below minimum threshold (machine epsilon level)",
+      "medicalContext": {},
+      "technicalDetails": {
+        "algorithm": "Unknown",
+        "parameters": {},
+        "convergenceInfo": {
+          "step": 11,
+          "time": 0.016683333333499997,
+          "extremeCase": true
+        },
+        "numericalPrecision": "Unknown"
+      },
+      "resolved": false,
+      "fallbackApplied": false
+    },
+    {
+      "id": "ERR_1754112425253_gu3j7wdcb",
+      "timestamp": "2025-08-02T05:27:05.253Z",
+      "severity": "HIGH",
+      "category": "NUMERICAL",
+      "source": "LSODASolver",
+      "message": "Step size below minimum threshold (machine epsilon level)",
+      "medicalContext": {},
+      "technicalDetails": {
+        "algorithm": "Unknown",
+        "parameters": {},
+        "convergenceInfo": {
+          "step": 11,
+          "time": 1.0000000000000007e-13,
+          "extremeCase": true
+        },
+        "numericalPrecision": "Unknown"
+      },
+      "resolved": false,
+      "fallbackApplied": false
+    },
+    {
+      "id": "ERR_1754112425253_8eey8f9rs",
+      "timestamp": "2025-08-02T05:27:05.253Z",
+      "severity": "HIGH",
+      "category": "NUMERICAL",
+      "source": "LSODASolver",
+      "message": "LSODA final integration error: LSODA failed at t = 0: Step size too small: 1.0000000000000008e-14 at time 1.0000000000000007e-13 (below machine epsilon)",
+      "medicalContext": {},
+      "technicalDetails": {
+        "algorithm": "Unknown",
+        "parameters": {},
+        "convergenceInfo": {
+          "error": "LSODA failed at t = 0: Step size too small: 1.0000000000000008e-14 at time 1.0000000000000007e-13 (below machine epsilon)",
+          "currentState": [
+            10,
+            0,
+            0
+          ]
+        },
+        "numericalPrecision": "Unknown"
+      },
+      "resolved": false,
+      "fallbackApplied": false
+    },
+    {
+      "id": "ERR_1754112425253_hkekfwxps",
+      "timestamp": "2025-08-02T05:27:05.253Z",
+      "severity": "HIGH",
+      "category": "NUMERICAL",
+      "source": "MonitoringEngine",
+      "message": "LSODA monitoring failed, RK4 fallback applied: LSODA failed at t = 0: Step size too small: 1.0000000000000008e-14 at time 1.0000000000000007e-13 (below machine epsilon)",
+      "medicalContext": {},
+      "technicalDetails": {
+        "algorithm": "Unknown",
+        "parameters": {},
+        "convergenceInfo": {
+          "originalError": "LSODA failed at t = 0: Step size too small: 1.0000000000000008e-14 at time 1.0000000000000007e-13 (below machine epsilon)",
+          "resolved": true
+        },
+        "numericalPrecision": "Unknown"
+      },
+      "resolved": false,
+      "fallbackApplied": false
+    }
+  ],
+  "statistics": {
+    "totalErrors": 4,
+    "bySeverity": {
+      "CRITICAL": 0,
+      "HIGH": 4,
+      "MEDIUM": 0,
+      "LOW": 0,
+      "INFO": 0
+    },
+    "byCategory": {
+      "PHARMACOKINETIC": 0,
+      "VALIDATION": 0,
+      "NUMERICAL": 4,
+      "PROTOCOL": 0,
+      "SYSTEM": 0,
+      "SAFETY": 0
+    },
+    "bySource": {
+      "MasuiKe0Calculator": 0,
+      "ProtocolEngine": 0,
+      "AdvancedProtocolEngine": 0,
+      "EnhancedProtocolEngine": 0,
+      "InductionEngine": 0,
+      "MonitoringEngine": 1,
+      "LSODASolver": 3,
+      "VHACAlgorithm": 0,
+      "PatientModel": 0,
+      "MainController": 0
+    }
+  }
+}

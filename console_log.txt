@@ -1,0 +1,48 @@
+Service Worker not available (file:// protocol or browser not supported)
+main.js:35 Initializing Remimazolam TCI TIVA V1.1.1 with Advanced Step-Down Protocol and Mobile-Optimized ±Button Controls
+protocol-engine.js:38 Calculating PK parameters for protocol optimization
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=50, TBW=70, height=170, sex=0, ASAPS=0
+masui-ke0-calculator.js:330 PK Parameters: Object
+masui-ke0-calculator.js:334 Rate Constants: Object
+masui-ke0-calculator.js:338 Plasma Coefficients: Object
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.22065
+masui-ke0-calculator.js:375 Ke0 (Regression): -7.93419
+error-logger.js:383 [CRITICAL] SAFETY - MasuiKe0Calculator: ke0 value outside safe range MedicalErrorReport
+logToConsole @ error-logger.js:383Understand this error
+advanced-protocol-engine.js:44 Calculating PK parameters with advanced Masui Ke0 model
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=50, TBW=70, height=170, sex=0, ASAPS=0
+masui-ke0-calculator.js:330 PK Parameters: Object
+masui-ke0-calculator.js:334 Rate Constants: Object
+masui-ke0-calculator.js:338 Plasma Coefficients: Object
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.22065
+masui-ke0-calculator.js:375 Ke0 (Regression): -7.93419
+error-logger.js:383 [CRITICAL] SAFETY - MasuiKe0Calculator: ke0 value outside safe range MedicalErrorReport
+logToConsole @ error-logger.js:383Understand this error
+advanced-protocol-engine.js:35 Advanced Protocol Engine: Patient set Patient-2025-08-02
+enhanced-protocol-engine.js:41 Calculating PK parameters for enhanced protocol optimization
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=50, TBW=70, height=170, sex=0, ASAPS=0
+masui-ke0-calculator.js:330 PK Parameters: Object
+masui-ke0-calculator.js:334 Rate Constants: Object
+masui-ke0-calculator.js:338 Plasma Coefficients: Object
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.22065
+masui-ke0-calculator.js:375 Ke0 (Regression): -7.93419
+error-logger.js:383 [CRITICAL] SAFETY - MasuiKe0Calculator: ke0 value outside safe range MedicalErrorReport
+logToConsole @ error-logger.js:383Understand this error
+monitoring-engine.js:100 Calculating PK parameters for monitoring with Masui Ke0 model
+masui-ke0-calculator.js:325 === Masui Ke0 Complete Calculation ===
+masui-ke0-calculator.js:326 Patient: age=50, TBW=70, height=170, sex=0, ASAPS=0
+masui-ke0-calculator.js:330 PK Parameters: Object
+masui-ke0-calculator.js:334 Rate Constants: Object
+masui-ke0-calculator.js:338 Plasma Coefficients: Object
+masui-ke0-calculator.js:344 Ke0 (Numerical): 0.22065
+masui-ke0-calculator.js:375 Ke0 (Regression): -7.93419
+error-logger.js:383 [CRITICAL] SAFETY - MasuiKe0Calculator: ke0 value outside safe range MedicalErrorReport
+logToConsole @ error-logger.js:383Understand this error
+monitoring-engine.js:68 Patient set for monitoring engine: Patient-2025-08-02
+main.js:78 Default patient initialized: Patient-2025-08-02
+main.js:55 Application initialized successfully
+images/icon-32.png:1  Failed to load resource: net::ERR_FILE_NOT_FOUNDUnderstand this error
+index.html:1 Access to internal resource at 'file:///Users/ysuzuki/Dropbox/claude_work/remimazolam_TCI_TIVA_V1_0_0/manifest.json' from origin 'null' has been blocked by CORS policy: Cross origin requests are only supported for protocol schemes: chrome, chrome-extension, chrome-untrusted, data, http, https, isolated-app.

@@ -281,8 +281,8 @@ class MasuiKe0Calculator {
         const F2_sex = F_sex - 0.226;
         const F2_ASAPS = F_ASAPS - 0.226;
         
-        // 4B.3 重回帰式によるke0計算
-        const ke0_approx = -9.06 + F_age + F_TBW + F_height + (0.999 * F_sex) + F_ASAPS -
+        // 4B.3 重回帰式によるke0計算 (CORRECTED: constant was -9.06, now -0.931)
+        const ke0_approx = -0.930582 + F_age + F_TBW + F_height + (0.999 * F_sex) + F_ASAPS -
                           (4.50 * F2_age * F2_TBW) - (4.51 * F2_age * F2_height) +
                           (2.46 * F2_age * F2_sex) + (3.35 * F2_age * F2_ASAPS) -
                           (12.6 * F2_TBW * F2_height) + (0.394 * F2_TBW * F2_sex) +
@@ -301,7 +301,27 @@ class MasuiKe0Calculator {
      * メインの計算関数
      */
     static calculateKe0Complete(age, TBW, height, sex, ASAPS) {
+        const patientData = { age, weight: TBW, height, sex, asaPS: ASAPS };
+        
         try {
+            // Input validation with error logging
+            const validationError = this.validateInputs(age, TBW, height, sex, ASAPS);
+            if (validationError) {
+                if (typeof MedicalErrorLog !== 'undefined') {
+                    MedicalErrorLog.logValidationError(
+                        ErrorSource.MASUI_KE0_CALCULATOR,
+                        validationError,
+                        patientData,
+                        {
+                            ageRange: '18-100 years',
+                            weightRange: '30-200 kg',
+                            heightRange: '120-220 cm'
+                        }
+                    );
+                }
+                throw new Error(validationError);
+            }
+
             console.log('=== Masui Ke0 Complete Calculation ===');
             console.log(`Patient: age=${age}, TBW=${TBW}, height=${height}, sex=${sex}, ASAPS=${ASAPS}`);
             
@@ -318,12 +338,59 @@ class MasuiKe0Calculator {
             console.log('Plasma Coefficients:', coefficients);
             
             // ステップ4A: 数値解析による厳密解
-            const ke0_numerical = this.calculateKe0Numerical(coefficients);
-            console.log('Ke0 (Numerical):', ke0_numerical ? ke0_numerical.toFixed(5) : 'Failed');
+            let ke0_numerical = null;
+            try {
+                ke0_numerical = this.calculateKe0Numerical(coefficients);
+                console.log('Ke0 (Numerical):', ke0_numerical ? ke0_numerical.toFixed(5) : 'Failed');
+                
+                if (!ke0_numerical && typeof MedicalErrorLog !== 'undefined') {
+                    MedicalErrorLog.logNumericalError(
+                        ErrorSource.MASUI_KE0_CALCULATOR,
+                        'Numerical ke0 calculation failed - using regression fallback',
+                        {
+                            name: 'Cubic equation solver',
+                            parameters: coefficients,
+                            precision: '1e-12'
+                        },
+                        { converged: false, reason: 'No valid roots found' }
+                    );
+                }
+            } catch (numericalError) {
+                if (typeof MedicalErrorLog !== 'undefined') {
+                    MedicalErrorLog.logNumericalError(
+                        ErrorSource.MASUI_KE0_CALCULATOR,
+                        'Numerical ke0 calculation error: ' + numericalError.message,
+                        {
+                            name: 'Cubic equation solver',
+                            parameters: coefficients
+                        },
+                        { error: numericalError.message }
+                    );
+                }
+                console.warn('Numerical calculation failed, using regression method');
+            }
             
             // ステップ4B: 重回帰モデルによる近似解
             const ke0_regression = this.calculateKe0Regression(age, TBW, height, sex, ASAPS);
             console.log('Ke0 (Regression):', ke0_regression.toFixed(5));
+            
+            // Safety check for ke0 values
+            if (ke0_regression < 0.01 || ke0_regression > 1.0) {
+                if (typeof MedicalErrorLog !== 'undefined') {
+                    MedicalErrorLog.logSafetyError(
+                        ErrorSource.MASUI_KE0_CALCULATOR,
+                        'ke0 value outside safe range',
+                        {
+                            safeRange: '0.01 - 1.0 min⁻¹',
+                            threshold: 'Clinical safety bounds'
+                        },
+                        {
+                            ke0_regression: ke0_regression,
+                            ke0_numerical: ke0_numerical
+                        }
+                    );
+                }
+            }
             
             return {
                 pkParameters: pkParams,
@@ -336,11 +403,47 @@ class MasuiKe0Calculator {
             
         } catch (error) {
             console.error('Ke0 calculation failed:', error);
+            
+            if (typeof MedicalErrorLog !== 'undefined') {
+                MedicalErrorLog.logPKError(
+                    ErrorSource.MASUI_KE0_CALCULATOR,
+                    'Complete ke0 calculation failed: ' + error.message,
+                    patientData,
+                    {
+                        calculationType: 'Complete ke0 calculation',
+                        inputValidation: 'Failed'
+                    },
+                    error
+                );
+            }
+            
             return {
                 error: error.message,
                 success: false
             };
         }
+    }
+
+    /**
+     * Input validation for patient parameters
+     */
+    static validateInputs(age, TBW, height, sex, ASAPS) {
+        if (age < 18 || age > 100) {
+            return `Age must be between 18-100 years (provided: ${age})`;
+        }
+        if (TBW < 30 || TBW > 200) {
+            return `Weight must be between 30-200 kg (provided: ${TBW})`;
+        }
+        if (height < 120 || height > 220) {
+            return `Height must be between 120-220 cm (provided: ${height})`;
+        }
+        if (sex !== 0 && sex !== 1) {
+            return `Sex must be 0 (male) or 1 (female) (provided: ${sex})`;
+        }
+        if (ASAPS !== 0 && ASAPS !== 1) {
+            return `ASA-PS must be 0 (I-II) or 1 (III-IV) (provided: ${ASAPS})`;
+        }
+        return null;
     }
 }
 
