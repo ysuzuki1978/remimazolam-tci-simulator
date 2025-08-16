@@ -1,0 +1,21 @@
+{
+  "layer": 1,
+  "layer_name": "Numerical Accuracy",
+  "timestamp": "2025-08-16T11:01:38.903Z",
+  "session_id": "SESSION-1755342098889-m8l6r1f1yrd",
+  "results": {
+    "base_accuracy": 0.8125,
+    "monte_carlo_summary": {
+      "total_tests": 0,
+      "passed_tests": 0,
+      "average_accuracy": 0.8125,
+      "min_accuracy": 0.8125,
+      "max_accuracy": 0.8125
+    },
+    "boundary_tests": {},
+    "error_analysis": {},
+    "masui_comparison": 0
+  },
+  "status": "FAILED",
+  "confidence_score": 0.95
+}

@@ -1,0 +1,55 @@
+[
+  {
+    "index": 0,
+    "timestamp": "2025-08-16T11:01:38.889Z",
+    "data": {
+      "type": "GENESIS",
+      "validation_id": "VAL-1755342098889-p713zcifpa",
+      "system_info": {
+        "node_version": "v24.1.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "timestamp": "2025-08-16T11:01:38.889Z"
+      },
+      "validation_scope": "PK/PD Medical Simulation Software",
+      "ai_validators": [
+        "Sequential",
+        "Context7",
+        "Claude-Code"
+      ]
+    },
+    "previous_hash": "0",
+    "hash": "ce36bc0d91407a9b630ae978bd9fd70f10bfabe5087e28ceb28a1ac97dce9acc",
+    "nonce": 0,
+    "evidence_type": "GENESIS"
+  },
+  {
+    "index": 1,
+    "timestamp": "2025-08-16T11:01:40.282Z",
+    "data": {
+      "session_id": "SESSION-1755342098889-czefte70ydb",
+      "start_time": "2025-08-16T11:01:38.889Z",
+      "end_time": "2025-08-16T11:01:40.282Z",
+      "total_duration_ms": 1393,
+      "total_evidence_blocks": 1,
+      "validation_metrics": {
+        "total_tests": 0,
+        "passed_tests": 0,
+        "failed_tests": 0,
+        "warnings": 0,
+        "errors": 0,
+        "layers_completed": {}
+      },
+      "layers_completed": [],
+      "chain_integrity": true,
+      "overall_status": "VALIDATION_FAILED",
+      "layer": null,
+      "evidence_id": "EVD-1755342100282-5sk13r6uy3",
+      "validation_id": "VAL-1755342098889-p713zcifpa"
+    },
+    "previous_hash": "ce36bc0d91407a9b630ae978bd9fd70f10bfabe5087e28ceb28a1ac97dce9acc",
+    "hash": "35442fff5b8f3d510db3fe2a7bd8218e5434759b4789060d657b53b8eb3fac82",
+    "nonce": 0,
+    "evidence_type": "VALIDATION_COMPLETE"
+  }
+]

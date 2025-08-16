@@ -59,7 +59,7 @@ class EulerSolver extends NumericalSolver {
     }
 
     solve(odeSystem, initialState, tStart, tEnd, options = {}) {
-        const timeStep = options.timeStep || 0.1;
+        const timeStep = options.timeStep || 0.005;
         const infusionRateFunc = options.infusionRateFunc || (() => 0);
 
         const times = [];
@@ -120,7 +120,7 @@ class RK4Solver extends NumericalSolver {
     }
 
     solve(odeSystem, initialState, tStart, tEnd, options = {}) {
-        const timeStep = options.timeStep || 0.1;
+        const timeStep = options.timeStep || 0.005;
         const infusionRateFunc = options.infusionRateFunc || (() => 0);
 
         const times = [];
@@ -508,7 +508,7 @@ class NumericalSolvers {
             }
         };
 
-        this.currentMethod = 'rk4'; // Default to RK4 for stability
+        this.currentMethod = 'rk45'; // Default to RK45 for optimal clinical precision
     }
 
     /**

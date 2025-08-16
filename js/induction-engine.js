@@ -47,7 +47,7 @@ class InductionEngine {
         this.updateCallbacks = [];
         
         // Time step for real-time updates
-        this.timeStep = 0.1; // 0.1 minutes = 6 seconds
+        this.timeStep = 0.005; // 0.3 seconds (optimized precision)
     }
 
     /**

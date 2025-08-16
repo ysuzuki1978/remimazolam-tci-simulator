@@ -1,0 +1,40 @@
+{
+  "mcpServers": {
+    "code_lama": {
+      "type": "stdio",
+      "command": "/Users/ysuzuki/.local/bin/uv",
+      "args": [
+        "--directory",
+        "/Users/ysuzuki/code_lama",
+        "run",
+        "code_lama_server.py"
+      ]
+    },
+    "shell": {
+      "type": "stdio",
+      "command": "/Users/ysuzuki/dynamic-shell-server/.venv/bin/python",
+      "args": [
+        "/Users/ysuzuki/dynamic-shell-server/dynamic_shell_server.py"
+      ]
+    },
+    "mcp-obsidian": {
+      "type": "stdio",
+      "command": "/Users/ysuzuki/.nodebrew/current/bin/mcp-obsidian",
+      "args": [
+        "/Users/ysuzuki/memo/memo"
+      ],
+      "env": {
+        "PATH": "/Users/ysuzuki/.nodebrew/current/bin"
+      }
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "/Users/ysuzuki/.nodebrew/current/bin/npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    }
+  }
+}
+

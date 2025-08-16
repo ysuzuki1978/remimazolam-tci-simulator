@@ -27,7 +27,7 @@ class AdvancedProtocolEngine {
             targetCe: 1.0,
             upperThresholdRatio: 1.2,      // 120% of target
             reductionFactor: 0.70,         // 70% of current rate (30% reduction)
-            timeStep: 0.1,                 // 0.1 minute precision
+            timeStep: 0.005,               // 0.3 second precision (optimized)
             simulationDuration: 180,       // 3 hours
             targetReachTime: 20,           // 20 minutes to target
             adjustmentInterval: 5.0,       // 5 minutes minimum between adjustments

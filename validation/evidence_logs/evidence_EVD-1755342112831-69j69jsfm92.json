@@ -1,0 +1,16 @@
+{
+  "index": 38,
+  "timestamp": "2025-08-16T11:01:52.831Z",
+  "data": {
+    "test_type": "numerical_accuracy",
+    "base_accuracy": 0.9375,
+    "timestamp": "2025-08-16T11:01:52.831Z",
+    "layer": 1,
+    "evidence_id": "EVD-1755342112831-69j69jsfm92",
+    "validation_id": "VAL-1755342112815-ig1j8jjk5lc"
+  },
+  "previous_hash": "a7904ce7e5a2a9e58e4b6d79e6c11017cc5d83073efe705002ae669912608644",
+  "hash": "8ce21a12e1079c948fad2b738546a7cee3de1505d765932d6bc6e8da643c949d",
+  "nonce": 0,
+  "evidence_type": "NUMERICAL_VALIDATION"
+}

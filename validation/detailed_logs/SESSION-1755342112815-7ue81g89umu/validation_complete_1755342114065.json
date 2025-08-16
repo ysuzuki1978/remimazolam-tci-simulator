@@ -1,0 +1,18 @@
+{
+  "session_id": "SESSION-1755342112815-7ue81g89umu",
+  "start_time": "2025-08-16T11:01:52.815Z",
+  "end_time": "2025-08-16T11:01:54.064Z",
+  "total_duration_ms": 1249,
+  "total_evidence_blocks": 1,
+  "validation_metrics": {
+    "total_tests": 0,
+    "passed_tests": 0,
+    "failed_tests": 0,
+    "warnings": 0,
+    "errors": 0,
+    "layers_completed": {}
+  },
+  "layers_completed": [],
+  "chain_integrity": true,
+  "overall_status": "VALIDATION_FAILED"
+}

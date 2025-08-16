@@ -1,0 +1,33 @@
+{
+  "name": "pharmacology-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for pharmacological validation and drug parameter verification",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "build": "npm run start",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "sqlite3": "^5.1.6",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "pharmacology", 
+    "drug-validation",
+    "medical-ai",
+    "pubmed",
+    "pharmacokinetics"
+  ],
+  "author": "AI Validation System",
+  "license": "MIT"
+}

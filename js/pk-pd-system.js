@@ -258,7 +258,7 @@ class PKPDIntegrationAdapter {
      * @returns {Object} - Clinical results
      */
     simulate(doseEvents, patient, simulationDuration, options = {}) {
-        const timeStep = options.timeStep || 0.1;
+        const timeStep = options.timeStep || 0.005;
         const initialState = calculateBolusInitialState(
             doseEvents[0]?.bolusMg || 0, 
             this.pkParams

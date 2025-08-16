@@ -1,0 +1,46 @@
+[
+  {
+    "index": 0,
+    "timestamp": "2025-08-16T11:01:20.506Z",
+    "data": {
+      "type": "GENESIS",
+      "validation_id": "VAL-1755342080506-ynpuaxzclvp",
+      "system_info": {
+        "node_version": "v24.1.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "timestamp": "2025-08-16T11:01:20.506Z"
+      },
+      "validation_scope": "PK/PD Medical Simulation Software",
+      "ai_validators": [
+        "Sequential",
+        "Context7",
+        "Claude-Code"
+      ]
+    },
+    "previous_hash": "0",
+    "hash": "dd2ff4fe0df39a158888b8e5a0d3eb079f63e751eb4abac74050f88b9c674b49",
+    "nonce": 0,
+    "evidence_type": "GENESIS"
+  },
+  {
+    "index": 1,
+    "timestamp": "2025-08-16T11:01:21.736Z",
+    "data": {
+      "test_type": "ai_consensus",
+      "participating_ais": [
+        "sequential",
+        "context7",
+        "claude_code"
+      ],
+      "consensus_algorithm": "Enhanced Byzantine Agreement with Outlier Detection",
+      "layer": 4,
+      "evidence_id": "EVD-1755342081736-huf3zu0she",
+      "validation_id": "VAL-1755342080506-ynpuaxzclvp"
+    },
+    "previous_hash": "dd2ff4fe0df39a158888b8e5a0d3eb079f63e751eb4abac74050f88b9c674b49",
+    "hash": "89fa74d92bf2e5b9f8eeb52ea36c9120e96c0252047a2caf240d36b4d06ede7c",
+    "nonce": 0,
+    "evidence_type": "CONSENSUS_VALIDATION"
+  }
+]

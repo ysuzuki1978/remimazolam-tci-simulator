@@ -1,0 +1,24 @@
+{
+  "index": 1,
+  "timestamp": "2025-08-16T11:00:53.344Z",
+  "data": {
+    "layer": 4,
+    "timestamp": "2025-08-16T11:00:53.344Z",
+    "session_id": "SESSION-1755342052152-i44uj8n3pyn",
+    "error_type": "TypeError",
+    "error_message": "this.determineOutlierHandling is not a function",
+    "stack_trace": "TypeError: this.determineOutlierHandling is not a function\n    at EnhancedMultiAIValidator.detectAndHandleOutliers (/Users/ysuzuki/Dropbox/claude_work/remimazolam_TCI_TIVA_V1_0_0/validation/enhanced-multi-ai-validator.js:275:36)\n    at EnhancedMultiAIValidator.performCompleteValidation (/Users/ysuzuki/Dropbox/claude_work/remimazolam_TCI_TIVA_V1_0_0/validation/enhanced-multi-ai-validator.js:38:48)\n    at async MasuiValidationDemonstration.demonstrateAIConsensus (/Users/ysuzuki/Dropbox/claude_work/remimazolam_TCI_TIVA_V1_0_0/validation/masui-validation-demonstration.js:255:34)\n    at async MasuiValidationDemonstration.runCompleteValidationDemo (/Users/ysuzuki/Dropbox/claude_work/remimazolam_TCI_TIVA_V1_0_0/validation/masui-validation-demonstration.js:54:40)\n    at async runMasuiValidationDemo (/Users/ysuzuki/Dropbox/claude_work/remimazolam_TCI_TIVA_V1_0_0/validation/masui-validation-demonstration.js:508:25)",
+    "context": {
+      "validation_phase": "multi_ai_consensus",
+      "pk_model": "Masui Remimazolam Model"
+    },
+    "severity": "HIGH",
+    "recovery_action": "Check data types and format",
+    "evidence_id": "EVD-1755342053344-ssqxwvqwya",
+    "validation_id": "VAL-1755342052152-897fzjiev63"
+  },
+  "previous_hash": "99ac8ddf0545a6b94d1883334dbfcf86c5023b8b3e8bba65f18224e91df6e896",
+  "hash": "6e279cb9733fc3712869fc6387eb96dc6a7a71a54de96b3141bb490ef1797275",
+  "nonce": 0,
+  "evidence_type": "ERROR_LOG"
+}

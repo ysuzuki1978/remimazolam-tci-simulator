@@ -17,7 +17,7 @@ class ProtocolEngine {
             targetCe: 1.0,
             upperThreshold: 1.2,
             reductionFactor: 0.70,
-            timeStep: 0.1,
+            timeStep: 0.005,
             simulationDuration: 120,
             targetReachTime: 20,
             adjustmentInterval: 5.0

@@ -1,0 +1,20 @@
+{
+  "layer": 1,
+  "timestamp": "2025-08-16T10:58:02.238Z",
+  "session_id": "SESSION-1755341882237-ybmx5k55rl",
+  "error_type": "TypeError",
+  "error_message": "Cannot read properties of undefined (reading 'length')",
+  "stack_trace": "TypeError: Cannot read properties of undefined (reading 'length')\n    at ValidationLogger.logNumericalValidation (/Users/ysuzuki/Dropbox/claude_work/remimazolam_TCI_TIVA_V1_0_0/validation/validation-logger.js:86:60)\n    at MasuiHighPrecisionValidator.performCompleteNumericalValidation (/Users/ysuzuki/Dropbox/claude_work/remimazolam_TCI_TIVA_V1_0_0/validation/masui-high-precision-validator.js:88:31)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async MasuiValidationDemonstration.validateMasuiSample01 (/Users/ysuzuki/Dropbox/claude_work/remimazolam_TCI_TIVA_V1_0_0/validation/masui-validation-demonstration.js:128:34)\n    at async MasuiValidationDemonstration.runCompleteValidationDemo (/Users/ysuzuki/Dropbox/claude_work/remimazolam_TCI_TIVA_V1_0_0/validation/masui-validation-demonstration.js:38:37)\n    at async runMasuiValidationDemo (/Users/ysuzuki/Dropbox/claude_work/remimazolam_TCI_TIVA_V1_0_0/validation/masui-validation-demonstration.js:508:25)",
+  "context": {
+    "validation_type": "high_precision_numerical",
+    "patient_inputs": {
+      "Age": 55,
+      "TBW": 70,
+      "Height": 170,
+      "Sex": 0,
+      "ASA_PS": 0
+    }
+  },
+  "severity": "HIGH",
+  "recovery_action": "Check data types and format"
+}
