@@ -1,5 +1,5 @@
 /**
- * Main Application Controller for Remimazolam TCI TIVA V1.0.0
+ * Main Application Controller for Remimazolam TCI TIVA V1.5.0
  * Integrated Application Main Controller
  * 
  * Coordinates:
@@ -32,7 +32,7 @@ class MainApplicationController {
     }
 
     initialize() {
-        console.log('Initializing Remimazolam TCI TIVA V1.3.0 with Advanced Step-Down Protocol and Mobile-Optimized ±Button Controls');
+        console.log('Initializing Remimazolam TCI TIVA V1.5.0 with Enhanced Precision Protocol Optimization');
         
         // Hide loading screen after short delay
         setTimeout(() => {
