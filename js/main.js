@@ -1,13 +1,6 @@
 /**
- * Main Application Controller for Remimazolam TCI TIVA V1.5.0
- * Integrated Application Main Controller
- * 
- * Coordinates:
- * - Induction Engine (Real-time prediction)
- * - Advanced Protocol Engine (Enhanced step-down optimization)
- * - Monitoring Engine (Dose tracking)
- * - UI Management
- * - State Management
+ * Main Application Controller for Remimazolam TCI TIVA V2.0.0
+ * Seamless 3-step workflow: Induction -> Protocol -> Monitoring
  */
 
 class MainApplicationController {
@@ -18,12 +11,30 @@ class MainApplicationController {
         this.advancedProtocolEngine = new AdvancedProtocolEngine();
         this.enhancedProtocolEngine = new EnhancedProtocolEngine();
         this.monitoringEngine = new MonitoringEngine();
-        
+
         // Chart instances
+        this.inductionChart = null;
+        this.inductionChartData = { times: [], plasma: [], effect: [] };
         this.protocolChart = null;
         this.monitoringChart = null;
-        
-        // Initialize on DOM ready
+
+        // Wizard state
+        this.currentStep = 0;
+        this.totalSteps = 3;
+
+        // Workflow data (shared between steps)
+        this.locCe = null;           // LOC Ce from induction (Step 1 -> Step 2)
+        this.safetyMargin = 0.15;    // Default safety margin
+        this.protocolResult = null;  // Protocol result (Step 2 -> Step 3)
+
+        // Touch tracking for swipe
+        this.touchStartX = 0;
+        this.touchDeltaX = 0;
+        this.isSwiping = false;
+
+        // Hold state for stepper long-press
+        this.holdState = null;
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.initialize());
         } else {
@@ -32,265 +43,267 @@ class MainApplicationController {
     }
 
     initialize() {
-        console.log('Initializing Remimazolam TCI TIVA V1.5.0 with Enhanced Precision Protocol Optimization');
-        
-        // Hide loading screen after short delay
+        console.log('Initializing Remimazolam TCI TIVA V2.0.0');
+
         setTimeout(() => {
             document.getElementById('loadingScreen').classList.add('hidden');
-        }, 2000);
-        
-        // Initialize default patient
+        }, 1500);
+
         this.initializeDefaultPatient();
-        
-        // Setup event listeners
         this.setupEventListeners();
-        
-        // Setup induction engine callbacks
+        this.setupWizard();
+        this.setupStepperControls();
         this.setupInductionCallbacks();
-        
-        // Update displays
         this.updatePatientDisplay();
-        this.updateAllPanelStates();
-        
+
         console.log('Application initialized successfully');
     }
 
+    // =============================================
+    // Patient Initialization
+    // =============================================
     initializeDefaultPatient() {
         const now = new Date();
-        now.setHours(8, 0, 0, 0); // Default to 8:00 AM
-        
+        now.setHours(8, 0, 0, 0);
+
         this.appState.patient = new Patient(
             `Patient-${new Date().toISOString().split('T')[0]}`,
-            50,
-            70.0,
-            170.0,
-            SexType.MALE,
-            AsapsType.CLASS_1_2,
-            now
+            50, 70.0, 170.0,
+            SexType.MALE, AsapsType.CLASS_1_2, now
         );
-        
-        // Set patient for all engines
+
         this.protocolEngine.setPatient(this.appState.patient);
         this.advancedProtocolEngine.setPatient(this.appState.patient);
         this.enhancedProtocolEngine.setPatient(this.appState.patient);
         this.monitoringEngine.setPatient(this.appState.patient);
-        
-        console.log('Default patient initialized:', this.appState.patient.id);
     }
 
-    setupEventListeners() {
-        // Disclaimer modal with iOS Safari fix
-        const disclaimerBtn = document.getElementById('acceptDisclaimer');
-        disclaimerBtn.addEventListener('click', () => {
-            this.hideDisclaimer();
+    // =============================================
+    // Wizard Control
+    // =============================================
+    setupWizard() {
+        const track = document.getElementById('wizardTrack');
+
+        // Step tab clicks
+        document.querySelectorAll('.step-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                this.goToStep(parseInt(tab.dataset.step));
+            });
         });
+
+        // Next/Back button clicks
+        document.querySelectorAll('[data-goto]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetStep = parseInt(btn.dataset.goto);
+                this.goToStep(targetStep);
+            });
+        });
+
+        // Swipe gesture on wizard viewport
+        const viewport = document.querySelector('.wizard-viewport');
+
+        viewport.addEventListener('touchstart', (e) => {
+            // Only track horizontal swipe if not interacting with inputs
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'BUTTON' || tag === 'CANVAS') return;
+
+            this.touchStartX = e.touches[0].clientX;
+            this.isSwiping = false;
+        }, { passive: true });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (this.touchStartX === 0) return;
+            this.touchDeltaX = e.touches[0].clientX - this.touchStartX;
+
+            if (Math.abs(this.touchDeltaX) > 20) {
+                this.isSwiping = true;
+            }
+        }, { passive: true });
+
+        viewport.addEventListener('touchend', () => {
+            if (this.isSwiping && Math.abs(this.touchDeltaX) > 60) {
+                if (this.touchDeltaX < 0 && this.currentStep < this.totalSteps - 1) {
+                    this.goToStep(this.currentStep + 1);
+                } else if (this.touchDeltaX > 0 && this.currentStep > 0) {
+                    this.goToStep(this.currentStep - 1);
+                }
+            }
+            this.touchStartX = 0;
+            this.touchDeltaX = 0;
+            this.isSwiping = false;
+        });
+
+        // Set initial position
+        this.goToStep(0);
+    }
+
+    goToStep(step) {
+        if (step < 0 || step >= this.totalSteps) return;
+
+        this.currentStep = step;
+        const track = document.getElementById('wizardTrack');
+        const offset = -(step * 100 / this.totalSteps);
+        track.style.transform = `translateX(${offset}%)`;
+
+        // Update tab states
+        document.querySelectorAll('.step-tab').forEach((tab, i) => {
+            tab.classList.toggle('active', i === step);
+            tab.classList.toggle('completed', i < step);
+        });
+
+        // Trigger step-specific actions
+        if (step === 1) {
+            this.onEnterProtocolStep();
+        } else if (step === 2) {
+            this.onEnterMonitoringStep();
+        }
+    }
+
+    // =============================================
+    // Event Listeners
+    // =============================================
+    setupEventListeners() {
+        // Disclaimer
+        const disclaimerBtn = document.getElementById('acceptDisclaimer');
+        disclaimerBtn.addEventListener('click', () => this.hideDisclaimer());
         disclaimerBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
             this.hideDisclaimer();
         });
-        
-        // Patient information
-        document.getElementById('editPatientBtn').addEventListener('click', () => {
-            this.showPatientModal();
-        });
-        
-        document.getElementById('closePatientModal').addEventListener('click', () => {
-            this.hidePatientModal();
-        });
-        
-        document.getElementById('cancelPatientEdit').addEventListener('click', () => {
-            this.hidePatientModal();
-        });
-        
-        document.getElementById('patientForm').addEventListener('submit', (e) => {
-            this.savePatientData(e);
-        });
+
+        // Patient modal
+        document.getElementById('editPatientBtn').addEventListener('click', () => this.showPatientModal());
+        document.getElementById('closePatientModal').addEventListener('click', () => this.hidePatientModal());
+        document.getElementById('cancelPatientEdit').addEventListener('click', () => this.hidePatientModal());
+        document.getElementById('patientForm').addEventListener('submit', (e) => this.savePatientData(e));
 
         // Error diagnostics
         document.getElementById('errorDiagnosticsBtn').addEventListener('click', () => {
-            if (window.errorDisplayInterface) {
-                window.errorDisplayInterface.toggle();
-            }
+            if (window.errorDisplayInterface) window.errorDisplayInterface.toggle();
         });
-
-        // Error indicator click
         document.getElementById('errorIndicator').addEventListener('click', () => {
-            if (window.errorDisplayInterface) {
-                window.errorDisplayInterface.show();
-            }
+            if (window.errorDisplayInterface) window.errorDisplayInterface.show();
         });
 
-        // Test error reporting (development only)
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            // Add test error button for development
-            setTimeout(() => {
-                this.addTestErrorButton();
-            }, 1000);
-        }
-        
-        // Patient form sliders
-        
-        // Induction panel
-        document.getElementById('startInductionBtn').addEventListener('click', () => {
-            this.startInduction();
-        });
-        
-        document.getElementById('stopInductionBtn').addEventListener('click', () => {
-            this.stopInduction();
-        });
-        
-        document.getElementById('recordSnapshotBtn').addEventListener('click', () => {
-            this.recordSnapshot();
-        });
-        
-        // Induction dose sliders
-        // Setup ±button controls (unified event delegation)
-        this.setupAdjustButtonControls();
-        
-        // Protocol panel
-        document.getElementById('optimizeProtocolBtn').addEventListener('click', () => {
-            this.optimizeProtocol();
-        });
-        
-        // Monitoring panel
-        document.getElementById('addDoseBtn').addEventListener('click', () => {
-            this.showDoseModal();
-        });
-        
-        document.getElementById('runSimulationBtn').addEventListener('click', () => {
-            this.runMonitoringSimulation();
-        });
-        
-        document.getElementById('exportCsvBtn').addEventListener('click', () => {
-            this.exportCsv();
-        });
-        
+        // Step 1: Induction
+        document.getElementById('startInductionBtn').addEventListener('click', () => this.startInduction());
+        document.getElementById('stopInductionBtn').addEventListener('click', () => this.stopInduction());
+        document.getElementById('recordSnapshotBtn').addEventListener('click', () => this.recordSnapshot());
+        document.getElementById('recordLOCBtn').addEventListener('click', () => this.recordLOC());
+
+        // Step 2: Protocol
+        document.getElementById('optimizeProtocolBtn').addEventListener('click', () => this.optimizeProtocol());
+
+        // Safety margin change
+        document.getElementById('safetyMargin').addEventListener('change', () => this.updateTargetCeFromMargin());
+
+        // Step 3: Monitoring
+        document.getElementById('addDoseBtn').addEventListener('click', () => this.showDoseModal());
+        document.getElementById('runSimulationBtn').addEventListener('click', () => this.runMonitoringSimulation());
+        document.getElementById('exportCsvBtn').addEventListener('click', () => this.exportCsv());
+
         // Dose modal
-        document.getElementById('closeDoseModal').addEventListener('click', () => {
-            this.hideDoseModal();
-        });
-        
-        document.getElementById('cancelDoseAdd').addEventListener('click', () => {
-            this.hideDoseModal();
-        });
-        
-        document.getElementById('doseForm').addEventListener('submit', (e) => {
-            this.addDoseEvent(e);
-        });
-        
-        // Dose form sliders
-        
+        document.getElementById('closeDoseModal').addEventListener('click', () => this.hideDoseModal());
+        document.getElementById('cancelDoseAdd').addEventListener('click', () => this.hideDoseModal());
+        document.getElementById('doseForm').addEventListener('submit', (e) => this.addDoseEvent(e));
+
         // Modal backdrop clicks
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove('active');
-                }
+                if (e.target === modal) modal.classList.remove('active');
             });
         });
     }
 
-
-    // ±Button Controls - Unified Event Delegation System
-    setupAdjustButtonControls() {
-        // Unified event delegation for all ±buttons
+    // =============================================
+    // Stepper Controls (unified event delegation)
+    // =============================================
+    setupStepperControls() {
         document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('btn-adjust')) {
-                this.handleAdjustButton(e.target);
-            }
+            const btn = e.target.closest('.stepper-btn');
+            if (btn) this.handleStepperButton(btn);
         });
 
-        // Long-press functionality
-        document.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('btn-adjust')) {
-                this.startHold(e.target);
-            }
-        });
-
-        document.addEventListener('touchstart', (e) => {
-            if (e.target.classList.contains('btn-adjust')) {
+        // Long-press: pointerdown
+        document.addEventListener('pointerdown', (e) => {
+            const btn = e.target.closest('.stepper-btn');
+            if (btn) {
                 e.preventDefault();
-                this.startHold(e.target);
+                this.startHold(btn);
             }
         });
 
-        // Stop hold events
-        ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(event => {
-            document.addEventListener(event, () => {
-                this.stopHold();
-            });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt => {
+            document.addEventListener(evt, () => this.stopHold());
         });
 
-        // Stop hold on window blur or scroll
-        window.addEventListener('blur', () => {
-            this.stopHold();
-        });
-
-        window.addEventListener('scroll', () => {
-            this.stopHold();
-        });
+        window.addEventListener('blur', () => this.stopHold());
     }
 
-    handleAdjustButton(button) {
+    handleStepperButton(button) {
         const targetId = button.getAttribute('data-target');
         const step = parseFloat(button.getAttribute('data-step'));
         const input = document.getElementById(targetId);
-        
         if (!input) return;
 
-        const isIncrement = button.classList.contains('btn-plus');
+        const isIncrement = button.classList.contains('stepper-plus');
         const currentValue = parseFloat(input.value) || 0;
         const min = parseFloat(input.min);
         const max = parseFloat(input.max);
-        
+
         let newValue = isIncrement ? currentValue + step : currentValue - step;
-        
-        // Apply min/max constraints
+        // Fix floating point
+        newValue = Math.round(newValue * 1000) / 1000;
         if (!isNaN(min)) newValue = Math.max(min, newValue);
         if (!isNaN(max)) newValue = Math.min(max, newValue);
-        
-        // Update input value
-        input.value = newValue;
-        
-        // Trigger change event for any listeners
+
+        // Display with appropriate precision to avoid floating point artifacts
+        const stepStr = button.getAttribute('data-step');
+        const decimals = (stepStr.includes('.')) ? stepStr.split('.')[1].length : 0;
+        input.value = newValue.toFixed(decimals);
         input.dispatchEvent(new Event('change'));
-        
-        // Update specific UI elements and handle induction updates
-        this.updateUIAfterAdjustment(targetId, newValue);
+
+        this.onStepperValueChanged(targetId, newValue);
     }
 
-    updateUIAfterAdjustment(targetId, value) {
-        // Handle induction dose updates
+    onStepperValueChanged(targetId, value) {
+        // Induction dose updates
         if (targetId === 'inductionBolus' || targetId === 'inductionContinuous') {
             if (this.appState.isInductionRunning) {
-                const bolusDose = parseFloat(document.getElementById('inductionBolus').value);
-                const continuousDose = parseFloat(document.getElementById('inductionContinuous').value);
-                this.inductionEngine.updateDose(bolusDose, continuousDose);
+                const bolus = parseFloat(document.getElementById('inductionBolus').value);
+                const continuous = parseFloat(document.getElementById('inductionContinuous').value);
+                this.inductionEngine.updateDose(bolus, continuous);
             }
         }
-        
-        // Handle BMI calculation for patient form
+
+        // BMI update
         if (targetId === 'editWeight' || targetId === 'editHeight') {
             this.updateBMICalculation();
         }
+
+        // Safety margin update
+        if (targetId === 'safetyMargin') {
+            this.safetyMargin = value;
+            this.updateTargetCeFromMargin();
+        }
+
+        // Target concentration manual edit
+        if (targetId === 'targetConcentration') {
+            // Manual override - don't auto-recalculate from margin
+        }
     }
 
-    // Long-press functionality with progressive acceleration
     startHold(button) {
-        this.stopHold(); // Clear any existing hold
-        
+        this.stopHold();
         this.holdState = {
             button: button,
             timeout: null,
             interval: null,
-            accelerationFactor: 0.9,
             currentInterval: 200
         };
-        
-        // Add visual feedback
+
         button.classList.add('holding');
-        
-        // Start continuous adjustment after 500ms delay
+
         this.holdState.timeout = setTimeout(() => {
             this.startHoldInterval(button);
         }, 500);
@@ -298,15 +311,11 @@ class MainApplicationController {
 
     startHoldInterval(button) {
         this.holdState.interval = setInterval(() => {
-            this.handleAdjustButton(button);
-            
-            // Progressive acceleration - get faster over time
-            this.holdState.currentInterval *= this.holdState.accelerationFactor;
+            this.handleStepperButton(button);
+            this.holdState.currentInterval *= 0.9;
             if (this.holdState.currentInterval < 50) {
-                this.holdState.currentInterval = 50; // Minimum interval
+                this.holdState.currentInterval = 50;
             }
-            
-            // Restart interval with new timing
             clearInterval(this.holdState.interval);
             this.startHoldInterval(button);
         }, this.holdState.currentInterval);
@@ -314,12 +323,8 @@ class MainApplicationController {
 
     stopHold() {
         if (this.holdState) {
-            if (this.holdState.timeout) {
-                clearTimeout(this.holdState.timeout);
-            }
-            if (this.holdState.interval) {
-                clearInterval(this.holdState.interval);
-            }
+            clearTimeout(this.holdState.timeout);
+            clearInterval(this.holdState.interval);
             if (this.holdState.button) {
                 this.holdState.button.classList.remove('holding');
             }
@@ -327,14 +332,18 @@ class MainApplicationController {
         }
     }
 
-
+    // =============================================
+    // Induction Callbacks
+    // =============================================
     setupInductionCallbacks() {
         this.inductionEngine.addUpdateCallback((state) => {
             this.updateInductionDisplay(state);
         });
     }
 
-    // Modal management
+    // =============================================
+    // Modal Management
+    // =============================================
     hideDisclaimer() {
         document.getElementById('disclaimerModal').classList.remove('active');
         document.getElementById('mainApp').classList.remove('hidden');
@@ -342,9 +351,8 @@ class MainApplicationController {
 
     showPatientModal() {
         const modal = document.getElementById('patientModal');
-        
-        // Populate form with current patient data
         const patient = this.appState.patient;
+
         document.getElementById('editPatientId').value = patient.id;
         document.getElementById('editAge').value = patient.age;
         document.getElementById('editWeight').value = patient.weight;
@@ -352,11 +360,8 @@ class MainApplicationController {
         document.querySelector(`input[name="sex"][value="${patient.sex === SexType.MALE ? 'male' : 'female'}"]`).checked = true;
         document.querySelector(`input[name="asa"][value="${patient.asaPS === AsapsType.CLASS_1_2 ? '1-2' : '3-4'}"]`).checked = true;
         document.getElementById('editAnesthesiaStart').value = patient.formattedStartTime;
-        
-        // Update display values
-        // Values are now displayed directly in input fields
         this.updateBMICalculation();
-        
+
         modal.classList.add('active');
     }
 
@@ -365,35 +370,29 @@ class MainApplicationController {
     }
 
     showDoseModal() {
-        const modal = document.getElementById('doseModal');
-        
-        // Reset form
         document.getElementById('doseTime').value = this.appState.patient.formattedStartTime;
         document.getElementById('doseBolusAmount').value = 0;
         document.getElementById('doseContinuousRate').value = 0;
-        // Values are now displayed directly in input fields
         document.getElementById('anesthesiaStartReference').textContent = this.appState.patient.formattedStartTime;
-        
-        modal.classList.add('active');
+        document.getElementById('doseModal').classList.add('active');
     }
 
     hideDoseModal() {
         document.getElementById('doseModal').classList.remove('active');
     }
 
-    // Data management
+    // =============================================
+    // Patient Data
+    // =============================================
     savePatientData(e) {
         e.preventDefault();
-        
         const formData = new FormData(e.target);
-        
-        // Parse time
+
         const timeValue = document.getElementById('editAnesthesiaStart').value;
         const anesthesiaStart = new Date(this.appState.patient.anesthesiaStartTime);
         const [hours, minutes] = timeValue.split(':').map(Number);
         anesthesiaStart.setHours(hours, minutes, 0, 0);
-        
-        // Update patient
+
         this.appState.patient.id = document.getElementById('editPatientId').value;
         this.appState.patient.age = parseInt(document.getElementById('editAge').value);
         this.appState.patient.weight = parseFloat(document.getElementById('editWeight').value);
@@ -401,72 +400,52 @@ class MainApplicationController {
         this.appState.patient.sex = formData.get('sex') === 'male' ? SexType.MALE : SexType.FEMALE;
         this.appState.patient.asaPS = formData.get('asa') === '1-2' ? AsapsType.CLASS_1_2 : AsapsType.CLASS_3_4;
         this.appState.patient.anesthesiaStartTime = anesthesiaStart;
-        
-        // Validate patient data
+
         const validation = this.appState.patient.validate();
         if (!validation.isValid) {
             alert('Input Error:\n' + validation.errors.join('\n'));
             return;
         }
-        
-        // Update engines with new patient data
+
         this.protocolEngine.setPatient(this.appState.patient);
         this.advancedProtocolEngine.setPatient(this.appState.patient);
         this.enhancedProtocolEngine.setPatient(this.appState.patient);
         this.monitoringEngine.setPatient(this.appState.patient);
-        
+
         this.updatePatientDisplay();
         this.hidePatientModal();
-        
-        console.log('Patient data updated:', this.appState.patient.id);
     }
 
-    addDoseEvent(e) {
-        e.preventDefault();
-        
-        const timeValue = document.getElementById('doseTime').value;
-        const bolusAmount = parseFloat(document.getElementById('doseBolusAmount').value);
-        const continuousRate = parseFloat(document.getElementById('doseContinuousRate').value);
-        
-        // Calculate minutes from anesthesia start
-        const doseTime = new Date(this.appState.patient.anesthesiaStartTime);
-        const [hours, minutes] = timeValue.split(':').map(Number);
-        doseTime.setHours(hours, minutes, 0, 0);
-        
-        let minutesFromStart = this.appState.patient.clockTimeToMinutes(doseTime);
-        
-        // Handle day crossing
-        if (minutesFromStart < 0) {
-            minutesFromStart += 1440; // Add 24 hours
-        }
-        
-        minutesFromStart = Math.max(0, Math.round(minutesFromStart));
-        
-        const doseEvent = new DoseEvent(minutesFromStart, bolusAmount, continuousRate);
-        
-        // Validate dose event
-        const validation = doseEvent.validate();
-        if (!validation.isValid) {
-            alert('Input Error:\n' + validation.errors.join('\n'));
-            return;
-        }
-        
-        this.monitoringEngine.addDoseEvent(doseEvent);
-        this.updateMonitoringDisplay();
-        this.hideDoseModal();
-        
-        console.log('Dose event added:', doseEvent);
+    updatePatientDisplay() {
+        const p = this.appState.patient;
+        const summary = `${p.age}y ${p.weight}kg`;
+        document.getElementById('headerPatientSummary').textContent = summary;
     }
 
-    // Induction management
+    updateBMICalculation() {
+        const weight = parseFloat(document.getElementById('editWeight').value);
+        const height = parseFloat(document.getElementById('editHeight').value);
+        const bmi = weight / Math.pow(height / 100, 2);
+        document.getElementById('bmiCalculated').textContent = bmi.toFixed(1);
+    }
+
+    // =============================================
+    // Step 1: Induction
+    // =============================================
     startInduction() {
-        const bolusDose = parseFloat(document.getElementById('inductionBolus').value);
-        const continuousDose = parseFloat(document.getElementById('inductionContinuous').value);
-        
-        if (this.inductionEngine.start(this.appState.patient, bolusDose, continuousDose)) {
+        const bolus = parseFloat(document.getElementById('inductionBolus').value);
+        const continuous = parseFloat(document.getElementById('inductionContinuous').value);
+
+        // Reset chart data
+        this.inductionChartData = { times: [], plasma: [], effect: [] };
+        if (this.inductionChart) {
+            this.inductionChart.destroy();
+            this.inductionChart = null;
+        }
+
+        if (this.inductionEngine.start(this.appState.patient, bolus, continuous)) {
             this.appState.isInductionRunning = true;
             this.updateInductionControls();
-            console.log('Induction started');
         }
     }
 
@@ -474,19 +453,173 @@ class MainApplicationController {
         if (this.inductionEngine.stop()) {
             this.appState.isInductionRunning = false;
             this.updateInductionControls();
-            console.log('Induction stopped');
         }
     }
 
     recordSnapshot() {
         const snapshot = this.inductionEngine.takeSnapshot();
-        if (snapshot) {
-            this.updateSnapshotsDisplay();
-            console.log('Snapshot recorded');
+        if (snapshot) this.updateSnapshotsDisplay();
+    }
+
+    recordLOC() {
+        // Record the current effect-site concentration as LOC Ce
+        const state = this.inductionEngine.getState();
+        if (!state) return;
+
+        this.locCe = state.effectSiteConcentration;
+
+        // Update LOC display in Step 1
+        document.getElementById('locCeDisplay').classList.remove('hidden');
+        document.getElementById('locCeValue').textContent = this.locCe.toFixed(3);
+
+        // Also record as a snapshot
+        this.recordSnapshot();
+
+        // Mark Step 1 tab as completed
+        document.querySelector('.step-tab[data-step="0"]').classList.add('completed');
+
+        // Update target Ce calculation
+        this.updateTargetCeFromMargin();
+    }
+
+    updateInductionDisplay(state) {
+        document.getElementById('plasmaConcentration').textContent = state.plasmaConcentration.toFixed(3);
+        document.getElementById('effectConcentration').textContent = state.effectSiteConcentration.toFixed(3);
+
+        // Format elapsed time as MM:SS
+        const totalSec = Math.floor(state.elapsedTime);
+        const mm = Math.floor(totalSec / 60).toString().padStart(2, '0');
+        const ss = (totalSec % 60).toString().padStart(2, '0');
+        document.getElementById('elapsedTime').textContent = `${mm}:${ss}`;
+
+        // Update real-time chart (every ~2 seconds to avoid performance issues)
+        if (totalSec % 2 === 0) {
+            this.updateInductionChart(state);
         }
     }
 
-    // Advanced Protocol optimization
+    updateInductionChart(state) {
+        const totalSec = Math.floor(state.elapsedTime);
+        const label = Math.floor(totalSec / 60) + ':' + (totalSec % 60).toString().padStart(2, '0');
+
+        this.inductionChartData.times.push(label);
+        this.inductionChartData.plasma.push(state.plasmaConcentration);
+        this.inductionChartData.effect.push(state.effectSiteConcentration);
+
+        // Keep last 300 data points (~10 min at 2s interval)
+        if (this.inductionChartData.times.length > 300) {
+            this.inductionChartData.times.shift();
+            this.inductionChartData.plasma.shift();
+            this.inductionChartData.effect.shift();
+        }
+
+        const ctx = document.getElementById('inductionRealtimeChart');
+        if (!ctx) return;
+
+        if (!this.inductionChart) {
+            this.inductionChart = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: this.inductionChartData.times,
+                    datasets: [
+                        {
+                            label: 'Cp',
+                            data: this.inductionChartData.plasma,
+                            borderColor: '#1a73e8',
+                            fill: false, tension: 0.3, pointRadius: 0, borderWidth: 1.5
+                        },
+                        {
+                            label: 'Ce',
+                            data: this.inductionChartData.effect,
+                            borderColor: '#34a853',
+                            fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 0 },
+                    interaction: { mode: 'index', intersect: false, axis: 'x' },
+                    plugins: {
+                        tooltip: { events: ['click', 'touchstart'], padding: 8, cornerRadius: 6 },
+                        legend: { labels: { boxWidth: 10, font: { size: 11 } } }
+                    },
+                    scales: {
+                        x: { ticks: { maxTicksLimit: 6, font: { size: 10 } } },
+                        y: { beginAtZero: true, title: { display: true, text: '\u03BCg/mL', font: { size: 10 } } }
+                    }
+                }
+            });
+        } else {
+            this.inductionChart.update('none');
+        }
+    }
+
+    updateInductionControls() {
+        const isRunning = this.appState.isInductionRunning;
+        document.getElementById('startInductionBtn').classList.toggle('hidden', isRunning);
+        document.getElementById('stopInductionBtn').classList.toggle('hidden', !isRunning);
+        document.getElementById('recordSnapshotBtn').classList.toggle('hidden', !isRunning);
+        document.getElementById('recordLOCBtn').classList.toggle('hidden', !isRunning);
+    }
+
+    updateSnapshotsDisplay() {
+        const snapshots = this.inductionEngine.getState().snapshots;
+        const container = document.getElementById('snapshotsList');
+        const section = document.getElementById('snapshotsSection');
+
+        if (snapshots.length > 0) {
+            section.classList.remove('hidden');
+            container.innerHTML = '';
+
+            snapshots.forEach((snapshot, index) => {
+                const item = document.createElement('div');
+                item.className = 'snapshot-item';
+                item.innerHTML = `
+                    <div class="snapshot-header">
+                        <span class="snapshot-title">Record #${snapshots.length - index}</span>
+                        <span class="snapshot-time">${snapshot.formattedTime}</span>
+                    </div>
+                    <div class="snapshot-values">
+                        <span>Cp: ${snapshot.plasmaConcentration.toFixed(3)}</span>
+                        <span>Ce: ${snapshot.effectSiteConcentration.toFixed(3)} &#956;g/mL</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        } else {
+            section.classList.add('hidden');
+        }
+    }
+
+    // =============================================
+    // Step 2: Protocol Optimization
+    // =============================================
+    onEnterProtocolStep() {
+        // If LOC Ce is available, show transfer banner and auto-fill target
+        if (this.locCe !== null) {
+            document.getElementById('locTransferBanner').classList.remove('hidden');
+            document.getElementById('transferredLocCe').textContent = this.locCe.toFixed(3);
+            this.updateTargetCeFromMargin();
+        }
+    }
+
+    updateTargetCeFromMargin() {
+        if (this.locCe === null) {
+            document.getElementById('calculatedTargetCe').textContent = '---';
+            return;
+        }
+
+        this.safetyMargin = parseFloat(document.getElementById('safetyMargin').value) || 0.15;
+        const targetCe = Math.round((this.locCe + this.safetyMargin) * 1000) / 1000;
+
+        document.getElementById('calculatedTargetCe').textContent = targetCe.toFixed(3);
+
+        // Auto-fill the target concentration input
+        document.getElementById('targetConcentration').value = targetCe.toFixed(2);
+    }
+
     optimizeProtocol() {
         const targetConcentration = parseFloat(document.getElementById('targetConcentration').value);
         const bolusDose = parseFloat(document.getElementById('protocolBolus').value);
@@ -494,9 +627,8 @@ class MainApplicationController {
         const upperThresholdRatio = parseFloat(document.getElementById('upperThresholdRatio').value) / 100;
         const reductionFactor = parseFloat(document.getElementById('reductionFactor').value) / 100;
         const adjustmentInterval = parseFloat(document.getElementById('adjustmentInterval').value);
-        
+
         try {
-            // Update enhanced protocol engine settings
             this.enhancedProtocolEngine.updateSettings({
                 targetCe: targetConcentration,
                 targetReachTime: targetTime,
@@ -504,50 +636,394 @@ class MainApplicationController {
                 reductionFactor: reductionFactor,
                 adjustmentInterval: adjustmentInterval
             });
-            
-            // Use enhanced protocol engine for V1.0.0
+
             const result = this.enhancedProtocolEngine.runEnhancedOptimization(
-                targetConcentration,
-                bolusDose,
-                targetTime
+                targetConcentration, bolusDose, targetTime
             );
-            
+
+            this.protocolResult = result;
             this.appState.protocolResult = result;
-            this.updateAdvancedProtocolDisplay(result);
-            console.log('Advanced Protocol optimization completed');
+            this.updateProtocolDisplay(result);
+
+            // Mark Step 2 as completed
+            document.querySelector('.step-tab[data-step="1"]').classList.add('completed');
         } catch (error) {
             console.error('Protocol optimization failed:', error);
-            alert('An error occurred during protocol optimization:\n' + error.message);
+            alert('Optimization error:\n' + error.message);
         }
     }
 
-    // Monitoring simulation
+    updateProtocolDisplay(result) {
+        document.getElementById('protocolResults').classList.remove('hidden');
+        document.getElementById('optimalRate').textContent = result.optimizedRate.toFixed(3);
+        document.getElementById('predictedFinalCe').textContent = result.protocol.performance.finalCe.toFixed(3);
+        document.getElementById('targetAccuracy').textContent = result.protocol.performance.targetAccuracy.toFixed(1);
+        document.getElementById('adjustmentCount').textContent = result.protocol.performance.totalAdjustments;
+        document.getElementById('stabilityIndex').textContent = result.protocol.performance.stabilityIndex.toFixed(1);
+        document.getElementById('convergenceTime').textContent =
+            result.protocol.performance.convergenceTime ? result.protocol.performance.convergenceTime.toFixed(1) : '---';
+
+        this.updateConcentrationEvaluationDisplay(result.protocol.concentrationAtTimePoints);
+        this.updateProtocolChart(result);
+        this.updateProtocolTable(result.protocol.dosageAdjustments);
+    }
+
+    updateConcentrationEvaluationDisplay(concentrationAtTimePoints) {
+        const container = document.getElementById('concentrationEvaluationResults');
+        if (!container) return;
+
+        container.innerHTML = '<h4>Concentration at Timepoints</h4>';
+
+        const table = document.createElement('table');
+        table.className = 'concentration-evaluation-table';
+
+        const headerRow = document.createElement('tr');
+        headerRow.innerHTML = `
+            <th>Time</th>
+            <th>Ce</th>
+            <th>Cp</th>
+            <th>Rate</th>
+            <th>Dev.</th>
+        `;
+        table.appendChild(headerRow);
+
+        concentrationAtTimePoints.forEach(point => {
+            const row = document.createElement('tr');
+            const cls = point.percentageDeviation > 10 ? 'high-deviation' :
+                        point.percentageDeviation > 5 ? 'medium-deviation' : 'low-deviation';
+            row.className = cls;
+            row.innerHTML = `
+                <td>${point.time}min</td>
+                <td>${point.effectSiteConcentration.toFixed(3)}</td>
+                <td>${point.plasmaConcentration.toFixed(3)}</td>
+                <td>${point.infusionRate.toFixed(2)}</td>
+                <td>${point.percentageDeviation.toFixed(1)}%</td>
+            `;
+            table.appendChild(row);
+        });
+
+        container.appendChild(table);
+        container.classList.remove('hidden');
+    }
+
+    updateProtocolChart(result) {
+        const ctx = document.getElementById('protocolChart').getContext('2d');
+        if (this.protocolChart) this.protocolChart.destroy();
+
+        const chartData = this.enhancedProtocolEngine.getEnhancedChartData();
+        if (!chartData || !chartData.times) return;
+
+        this.protocolChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.times.map(t => {
+                    const ct = this.appState.patient.minutesToClockTime(t);
+                    return ct.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false });
+                }),
+                datasets: [
+                    {
+                        label: 'Cp',
+                        data: chartData.plasmaConcentrations,
+                        borderColor: '#1a73e8',
+                        backgroundColor: 'rgba(26,115,232,0.1)',
+                        fill: false, tension: 0.1, pointRadius: 0, borderWidth: 1.5
+                    },
+                    {
+                        label: 'Ce',
+                        data: chartData.effectSiteConcentrations,
+                        borderColor: '#34a853',
+                        backgroundColor: 'rgba(52,168,83,0.1)',
+                        fill: false, tension: 0.1, pointRadius: 0, borderWidth: 2
+                    },
+                    {
+                        label: 'Target',
+                        data: chartData.targetLine,
+                        borderColor: 'rgba(217,48,37,0.7)',
+                        borderDash: [5, 5], tension: 0, pointRadius: 0, borderWidth: 1.5, fill: false
+                    },
+                    {
+                        label: 'Upper',
+                        data: chartData.upperThresholdLine,
+                        borderColor: 'rgba(234,134,0,0.5)',
+                        borderDash: [2, 2], tension: 0, pointRadius: 0, borderWidth: 1, fill: false
+                    },
+                    {
+                        label: 'Rate',
+                        data: chartData.infusionRates,
+                        borderColor: '#7b1fa2',
+                        tension: 0.1, pointRadius: 0, borderWidth: 1.5, fill: false,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false, axis: 'x' },
+                plugins: {
+                    tooltip: {
+                        events: ['click', 'touchstart'],
+                        padding: 10, cornerRadius: 8,
+                        titleFont: { size: 12 }, bodyFont: { size: 11 }
+                    },
+                    legend: { display: true, labels: { boxWidth: 12, font: { size: 11 } } }
+                },
+                scales: {
+                    x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Conc (ug/mL)', font: { size: 10 } } },
+                    y1: {
+                        type: 'linear', display: true, position: 'right', beginAtZero: true,
+                        title: { display: true, text: 'Rate', font: { size: 10 } },
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
+        });
+    }
+
+    updateProtocolTable(dosageAdjustments) {
+        const container = document.getElementById('protocolTable');
+        container.innerHTML = '';
+
+        const table = document.createElement('table');
+        table.innerHTML = `
+            <thead><tr>
+                <th>Time</th><th>Action</th><th>Rate Change</th><th>Ce</th><th>Reason</th>
+            </tr></thead>
+            <tbody></tbody>
+        `;
+
+        const tbody = table.querySelector('tbody');
+
+        const initialRow = document.createElement('tr');
+        initialRow.innerHTML = '<td>0 min</td><td>Bolus</td><td>-</td><td>-</td><td>Induction</td>';
+        tbody.appendChild(initialRow);
+
+        const startRow = document.createElement('tr');
+        startRow.innerHTML = '<td>0 min</td><td>Start Infusion</td><td>-</td><td>-</td><td>Optimized</td>';
+        tbody.appendChild(startRow);
+
+        dosageAdjustments.forEach(adj => {
+            const row = document.createElement('tr');
+            row.className = adj.type === 'predictive_adjustment' ? 'predictive' : 'reactive';
+            row.innerHTML = `
+                <td>${adj.time.toFixed(1)}</td>
+                <td>Adjust</td>
+                <td>${adj.oldRate.toFixed(2)} &#8594; ${adj.newRate.toFixed(2)}</td>
+                <td>${adj.ceAtEvent.toFixed(3)}</td>
+                <td>${adj.reason}</td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        container.appendChild(table);
+    }
+
+    // =============================================
+    // Step 3: Monitoring
+    // =============================================
+    onEnterMonitoringStep() {
+        // If protocol result exists, offer to transfer
+        if (this.protocolResult) {
+            this.transferProtocolToMonitoring();
+        }
+    }
+
+    transferProtocolToMonitoring() {
+        const result = this.protocolResult;
+        if (!result) return;
+
+        const banner = document.getElementById('protocolTransferBanner');
+        const info = document.getElementById('transferredProtocolInfo');
+
+        const bolus = parseFloat(document.getElementById('protocolBolus').value);
+        const rate = result.optimizedRate;
+
+        info.textContent = `Bolus ${bolus}mg + ${rate.toFixed(2)} mg/kg/hr`;
+        banner.classList.remove('hidden');
+
+        // Only auto-load if monitoring has no events yet
+        const events = this.monitoringEngine.getDoseEvents();
+        if (events.length === 0) {
+            // Add bolus at time 0
+            const bolusEvent = new DoseEvent(0, bolus, rate);
+            this.monitoringEngine.addDoseEvent(bolusEvent);
+
+            // Add dosage adjustments
+            if (result.protocol && result.protocol.dosageAdjustments) {
+                result.protocol.dosageAdjustments.forEach(adj => {
+                    const adjEvent = new DoseEvent(Math.round(adj.time), 0, adj.newRate);
+                    this.monitoringEngine.addDoseEvent(adjEvent);
+                });
+            }
+
+            this.updateMonitoringDisplay();
+        }
+    }
+
+    addDoseEvent(e) {
+        e.preventDefault();
+
+        const timeValue = document.getElementById('doseTime').value;
+        const bolusAmount = parseFloat(document.getElementById('doseBolusAmount').value);
+        const continuousRate = parseFloat(document.getElementById('doseContinuousRate').value);
+
+        const doseTime = new Date(this.appState.patient.anesthesiaStartTime);
+        const [hours, minutes] = timeValue.split(':').map(Number);
+        doseTime.setHours(hours, minutes, 0, 0);
+
+        let minutesFromStart = this.appState.patient.clockTimeToMinutes(doseTime);
+        if (minutesFromStart < 0) minutesFromStart += 1440;
+        minutesFromStart = Math.max(0, Math.round(minutesFromStart));
+
+        const doseEvent = new DoseEvent(minutesFromStart, bolusAmount, continuousRate);
+        const validation = doseEvent.validate();
+        if (!validation.isValid) {
+            alert('Input Error:\n' + validation.errors.join('\n'));
+            return;
+        }
+
+        this.monitoringEngine.addDoseEvent(doseEvent);
+        this.updateMonitoringDisplay();
+        this.hideDoseModal();
+    }
+
+    updateMonitoringDisplay() {
+        const events = this.monitoringEngine.getDoseEvents();
+        const container = document.getElementById('doseEventsList');
+        container.innerHTML = '';
+
+        events.forEach((event, index) => {
+            const item = this.createDoseEventElement(event, index);
+            container.appendChild(item);
+        });
+    }
+
+    createDoseEventElement(event, index) {
+        const div = document.createElement('div');
+        div.className = 'dose-event';
+
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'dose-info';
+
+        const title = document.createElement('h4');
+        title.textContent = `${event.timeInMinutes} min (${event.formattedClockTime(this.appState.patient)})`;
+
+        const details = document.createElement('div');
+        details.className = 'dose-details';
+
+        if (event.bolusMg > 0 || event.continuousMgKgHr > 0) {
+            if (event.bolusMg > 0) {
+                const span = document.createElement('span');
+                span.textContent = `Bolus: ${event.bolusMg.toFixed(1)}mg`;
+                details.appendChild(span);
+            }
+            if (event.continuousMgKgHr > 0) {
+                const span = document.createElement('span');
+                span.textContent = `${event.continuousMgKgHr.toFixed(2)}mg/kg/hr`;
+                details.appendChild(span);
+            }
+        } else {
+            const span = document.createElement('span');
+            span.textContent = 'Discontinued';
+            span.className = 'dose-stop';
+            details.appendChild(span);
+        }
+
+        infoDiv.appendChild(title);
+        infoDiv.appendChild(details);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-dose';
+        deleteBtn.textContent = '\u00D7';
+        deleteBtn.addEventListener('click', () => {
+            this.monitoringEngine.removeDoseEvent(index);
+            this.updateMonitoringDisplay();
+        });
+
+        div.appendChild(infoDiv);
+        div.appendChild(deleteBtn);
+        return div;
+    }
+
     runMonitoringSimulation() {
         try {
             const result = this.monitoringEngine.runSimulation();
             this.appState.simulationResult = result;
             this.updateMonitoringResults(result);
-            console.log('Monitoring simulation completed');
         } catch (error) {
-            console.error('Monitoring simulation failed:', error);
-            alert('An error occurred during simulation execution:\n' + error.message);
+            console.error('Simulation failed:', error);
+            alert('Simulation error:\n' + error.message);
         }
     }
 
-    // CSV export
+    updateMonitoringResults(result) {
+        document.getElementById('simulationResults').classList.remove('hidden');
+        document.getElementById('maxPlasmaConc').textContent = result.maxPlasmaConcentration.toFixed(3);
+        document.getElementById('maxEffectConc').textContent = result.maxEffectSiteConcentration.toFixed(3);
+        document.getElementById('calculationMethod').textContent = result.calculationMethod;
+
+        this.updateMonitoringChart(result);
+    }
+
+    updateMonitoringChart(result) {
+        const ctx = document.getElementById('monitoringChart').getContext('2d');
+        if (this.monitoringChart) this.monitoringChart.destroy();
+
+        const chartData = this.monitoringEngine.getChartData();
+        if (!chartData) return;
+
+        this.monitoringChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    {
+                        label: 'Cp',
+                        data: chartData.plasmaData,
+                        borderColor: '#1a73e8',
+                        fill: false, tension: 0.1, pointRadius: 0, borderWidth: 1.5
+                    },
+                    {
+                        label: 'Ce',
+                        data: chartData.effectData,
+                        borderColor: '#34a853',
+                        fill: false, tension: 0.1, pointRadius: 0, borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false, axis: 'x' },
+                plugins: {
+                    tooltip: {
+                        events: ['click', 'touchstart'],
+                        padding: 10, cornerRadius: 8,
+                        titleFont: { size: 12 }, bodyFont: { size: 11 }
+                    },
+                    legend: { labels: { boxWidth: 12, font: { size: 11 } } }
+                },
+                scales: {
+                    x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Conc (ug/mL)', font: { size: 10 } } }
+                }
+            }
+        });
+    }
+
+    // =============================================
+    // CSV Export
+    // =============================================
     exportCsv() {
         try {
             const csvContent = this.monitoringEngine.exportToCSV();
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            
-            // Generate filename
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
-            const timeStr = now.toTimeString().substring(0, 5).replace(':', '-');
             const patientId = this.appState.patient.id.replace(/[^a-zA-Z0-9]/g, '_');
-            const filename = `${patientId}_${dateStr}_${timeStr}.csv`;
-            
-            // Create download link
+            const filename = `${patientId}_${dateStr}.csv`;
+
             const link = document.createElement('a');
             if (link.download !== undefined) {
                 const url = URL.createObjectURL(blob);
@@ -558,548 +1034,17 @@ class MainApplicationController {
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-                console.log('CSV exported:', filename);
-            } else {
-                alert('CSV download is not supported in your browser.');
             }
         } catch (error) {
             console.error('CSV export failed:', error);
-            alert('An error occurred during CSV export:\n' + error.message);
+            alert('Export error:\n' + error.message);
         }
-    }
-
-    // Display updates
-    updatePatientDisplay() {
-        const patient = this.appState.patient;
-        document.getElementById('patientId').textContent = patient.id;
-        document.getElementById('patientAge').textContent = `${patient.age} years`;
-        document.getElementById('patientWeight').textContent = `${patient.weight.toFixed(1)} kg`;
-        document.getElementById('patientHeight').textContent = `${patient.height.toFixed(0)} cm`;
-        document.getElementById('patientBMI').textContent = patient.bmi.toFixed(1);
-        document.getElementById('patientSex').textContent = SexType.displayName(patient.sex);
-        document.getElementById('patientASA').textContent = AsapsType.displayName(patient.asaPS);
-        document.getElementById('anesthesiaStartTime').textContent = patient.formattedStartTime;
-    }
-
-    updateBMICalculation() {
-        const weight = parseFloat(document.getElementById('editWeight').value);
-        const height = parseFloat(document.getElementById('editHeight').value);
-        const bmi = weight / Math.pow(height / 100, 2);
-        document.getElementById('bmiCalculated').textContent = bmi.toFixed(1);
-    }
-
-    updateInductionDisplay(state) {
-        document.getElementById('plasmaConcentration').textContent = state.plasmaConcentration.toFixed(3);
-        document.getElementById('effectConcentration').textContent = state.effectSiteConcentration.toFixed(3);
-        document.getElementById('elapsedTime').textContent = state.elapsedTimeString;
-        
-        if (state.snapshots.length > 0) {
-            this.updateSnapshotsDisplay();
-        }
-    }
-
-    updateInductionControls() {
-        const isRunning = this.appState.isInductionRunning;
-        document.getElementById('startInductionBtn').classList.toggle('hidden', isRunning);
-        document.getElementById('stopInductionBtn').classList.toggle('hidden', !isRunning);
-        document.getElementById('recordSnapshotBtn').classList.toggle('hidden', !isRunning);
-    }
-
-    updateSnapshotsDisplay() {
-        const snapshots = this.inductionEngine.getState().snapshots;
-        const container = document.getElementById('snapshotsList');
-        const section = document.getElementById('snapshotsSection');
-        
-        if (snapshots.length > 0) {
-            section.classList.remove('hidden');
-            container.innerHTML = '';
-            
-            snapshots.forEach((snapshot, index) => {
-                const item = document.createElement('div');
-                item.className = 'snapshot-item';
-                item.innerHTML = `
-                    <div class="snapshot-header">
-                        <span class="snapshot-title">Record #${snapshots.length - index}</span>
-                        <span class="snapshot-time">${snapshot.formattedTime}</span>
-                    </div>
-                    <div class="snapshot-values">
-                        <span>Plasma: ${snapshot.plasmaConcentration.toFixed(3)} μg/mL</span>
-                        <span>Effect-site: ${snapshot.effectSiteConcentration.toFixed(3)} μg/mL</span>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-        } else {
-            section.classList.add('hidden');
-        }
-    }
-
-    updateAdvancedProtocolDisplay(result) {
-        document.getElementById('protocolResults').classList.remove('hidden');
-        document.getElementById('optimalRate').textContent = result.optimizedRate.toFixed(3);
-        document.getElementById('predictedFinalCe').textContent = result.protocol.performance.finalCe.toFixed(3);
-        
-        // Update enhanced metrics
-        document.getElementById('targetAccuracy').textContent = result.protocol.performance.targetAccuracy.toFixed(1);
-        document.getElementById('adjustmentCount').textContent = result.protocol.performance.totalAdjustments;
-        document.getElementById('stabilityIndex').textContent = result.protocol.performance.stabilityIndex.toFixed(1);
-        document.getElementById('convergenceTime').textContent = 
-            result.protocol.performance.convergenceTime ? result.protocol.performance.convergenceTime.toFixed(1) : '∞';
-        
-        // Update enhanced concentration evaluation display
-        this.updateConcentrationEvaluationDisplay(result.protocol.concentrationAtTimePoints);
-        
-        // Update chart
-        this.updateAdvancedProtocolChart(result);
-        
-        // Update schedule table
-        this.updateProtocolTable(result.protocol.dosageAdjustments);
-    }
-
-    // New method for concentration evaluation display
-    updateConcentrationEvaluationDisplay(concentrationAtTimePoints) {
-        const container = document.getElementById('concentrationEvaluationResults');
-        if (!container) {
-            console.warn('Concentration evaluation container not found');
-            return;
-        }
-        
-        container.innerHTML = '<h4>📊 Concentration Evaluation at Specified Time Points</h4>';
-        
-        const table = document.createElement('table');
-        table.className = 'concentration-evaluation-table';
-        
-        const headerRow = document.createElement('tr');
-        headerRow.innerHTML = `
-            <th>Time</th>
-            <th>Effect-site Concentration</th>
-            <th>Plasma Concentration</th>
-            <th>Infusion Rate</th>
-            <th>Deviation from Target</th>
-            <th>Deviation Rate</th>
-        `;
-        table.appendChild(headerRow);
-        
-        concentrationAtTimePoints.forEach(point => {
-            const row = document.createElement('tr');
-            const deviationClass = point.percentageDeviation > 10 ? 'high-deviation' : 
-                                  point.percentageDeviation > 5 ? 'medium-deviation' : 'low-deviation';
-            row.className = deviationClass;
-            
-            row.innerHTML = `
-                <td>${point.time} min</td>
-                <td>${point.effectSiteConcentration.toFixed(3)} μg/mL</td>
-                <td>${point.plasmaConcentration.toFixed(3)} μg/mL</td>
-                <td>${point.infusionRate.toFixed(2)} mg/kg/hr</td>
-                <td>${point.deviationFromTarget.toFixed(3)} μg/mL</td>
-                <td>${point.percentageDeviation.toFixed(1)}%</td>
-            `;
-            table.appendChild(row);
-        });
-        
-        container.appendChild(table);
-        container.classList.remove('hidden');
-    }
-
-    updateMonitoringDisplay() {
-        const events = this.monitoringEngine.getDoseEvents();
-        const container = document.getElementById('doseEventsList');
-        container.innerHTML = '';
-        
-        events.forEach((event, index) => {
-            const item = this.createDoseEventElement(event, index);
-            container.appendChild(item);
-        });
-    }
-
-    updateMonitoringResults(result) {
-        document.getElementById('simulationResults').classList.remove('hidden');
-        document.getElementById('maxPlasmaConc').textContent = result.maxPlasmaConcentration.toFixed(3);
-        document.getElementById('maxEffectConc').textContent = result.maxEffectSiteConcentration.toFixed(3);
-        document.getElementById('calculationMethod').textContent = result.calculationMethod;
-        
-        // Update monitoring chart
-        this.updateMonitoringChart(result);
-    }
-
-    createDoseEventElement(event, index) {
-        const div = document.createElement('div');
-        div.className = 'dose-event';
-        
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'dose-info';
-        
-        const title = document.createElement('h4');
-        title.textContent = `${event.timeInMinutes} min (${event.formattedClockTime(this.appState.patient)})`;
-        
-        const details = document.createElement('div');
-        details.className = 'dose-details';
-        
-        if (event.bolusMg > 0 || event.continuousMgKgHr > 0) {
-            if (event.bolusMg > 0) {
-                const bolusSpan = document.createElement('span');
-                bolusSpan.textContent = `Bolus: ${event.bolusMg.toFixed(1)}mg`;
-                details.appendChild(bolusSpan);
-            }
-            
-            if (event.continuousMgKgHr > 0) {
-                const continuousSpan = document.createElement('span');
-                continuousSpan.textContent = `Continuous: ${event.continuousMgKgHr.toFixed(2)}mg/kg/hr`;
-                details.appendChild(continuousSpan);
-            }
-        } else {
-            const stopSpan = document.createElement('span');
-            stopSpan.textContent = 'Administration Discontinued';
-            stopSpan.className = 'dose-stop';
-            details.appendChild(stopSpan);
-        }
-        
-        infoDiv.appendChild(title);
-        infoDiv.appendChild(details);
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'delete-dose';
-        deleteBtn.innerHTML = '🗑️';
-        deleteBtn.addEventListener('click', () => {
-            this.monitoringEngine.removeDoseEvent(index);
-            this.updateMonitoringDisplay();
-        });
-        
-        div.appendChild(infoDiv);
-        div.appendChild(deleteBtn);
-        
-        return div;
-    }
-
-    updateAdvancedProtocolChart(result) {
-        const ctx = document.getElementById('protocolChart').getContext('2d');
-        
-        if (this.protocolChart) {
-            this.protocolChart.destroy();
-        }
-        
-        const chartData = this.enhancedProtocolEngine.getEnhancedChartData();
-        if (!chartData || !chartData.times || !chartData.adjustmentTimes) {
-            console.error('Chart data is incomplete:', chartData);
-            return;
-        }
-        
-        this.protocolChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: chartData.times.map(t => {
-                    const clockTime = this.appState.patient.minutesToClockTime(t);
-                    return clockTime.toLocaleTimeString('ja-JP', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                    });
-                }),
-                datasets: [
-                    {
-                        label: 'Plasma Concentration',
-                        data: chartData.plasmaConcentrations,
-                        borderColor: 'rgba(0, 122, 255, 1)',
-                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                        fill: false,
-                        tension: 0.1
-                    },
-                    {
-                        label: 'Effect-site Concentration',
-                        data: chartData.effectSiteConcentrations,
-                        borderColor: 'rgba(52, 199, 89, 1)',
-                        backgroundColor: 'rgba(52, 199, 89, 0.1)',
-                        fill: false,
-                        tension: 0.1
-                    },
-                    {
-                        label: 'Target Concentration',
-                        data: chartData.targetLine,
-                        borderColor: 'rgba(255, 59, 48, 0.8)',
-                        backgroundColor: 'rgba(255, 59, 48, 0.1)',
-                        fill: false,
-                        borderDash: [5, 5],
-                        tension: 0,
-                        pointRadius: 0
-                    },
-                    {
-                        label: 'Upper Threshold',
-                        data: chartData.upperThresholdLine,
-                        borderColor: 'rgba(255, 149, 0, 0.8)',
-                        backgroundColor: 'rgba(255, 149, 0, 0.1)',
-                        fill: false,
-                        borderDash: [2, 2],
-                        tension: 0,
-                        pointRadius: 0
-                    },
-                    {
-                        label: 'Infusion Rate (mg/kg/hr)',
-                        data: chartData.infusionRates,
-                        borderColor: 'rgba(88, 86, 214, 1)',
-                        backgroundColor: 'rgba(88, 86, 214, 0.1)',
-                        fill: false,
-                        tension: 0.1,
-                        yAxisID: 'y1'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Time'
-                        }
-                    },
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        title: {
-                            display: true,
-                            text: 'Concentration (μg/mL)'
-                        },
-                        beginAtZero: true
-                    },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        title: {
-                            display: true,
-                            text: 'Infusion Rate (mg/kg/hr)'
-                        },
-                        beginAtZero: true,
-                        grid: {
-                            drawOnChartArea: false
-                        }
-                    }
-                },
-                plugins: {
-                    annotation: {
-                        annotations: (chartData.adjustmentTimes || []).map((time, index) => ({
-                            type: 'line',
-                            mode: 'vertical',
-                            scaleID: 'x',
-                            value: time,
-                            borderColor: 'rgba(255, 59, 48, 0.7)',
-                            borderWidth: 2,
-                            label: {
-                                content: `Adjustment ${index + 1}`,
-                                enabled: true,
-                                position: 'top'
-                            }
-                        }))
-                    }
-                }
-            }
-        });
-    }
-
-    updateMonitoringChart(result) {
-        const ctx = document.getElementById('monitoringChart').getContext('2d');
-        
-        if (this.monitoringChart) {
-            this.monitoringChart.destroy();
-        }
-        
-        const chartData = this.monitoringEngine.getChartData();
-        if (!chartData) return;
-        
-        this.monitoringChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: chartData.labels,
-                datasets: [
-                    {
-                        label: 'Plasma Concentration',
-                        data: chartData.plasmaData,
-                        borderColor: 'rgba(0, 122, 255, 1)',
-                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                        fill: false,
-                        tension: 0.1,
-                        pointRadius: 1
-                    },
-                    {
-                        label: 'Effect-site Concentration',
-                        data: chartData.effectData,
-                        borderColor: 'rgba(52, 199, 89, 1)',
-                        backgroundColor: 'rgba(52, 199, 89, 0.1)',
-                        fill: false,
-                        tension: 0.1,
-                        pointRadius: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Time'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Concentration (μg/mL)'
-                        },
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-    }
-
-    updateProtocolTable(dosageAdjustments) {
-        const container = document.getElementById('protocolTable');
-        container.innerHTML = '';
-        
-        const table = document.createElement('table');
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Action</th>
-                    <th>Dose Change</th>
-                    <th>Concentration</th>
-                    <th>Reason</th>
-                </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        `;
-        
-        const tbody = table.querySelector('tbody');
-        
-        // Add initial bolus row
-        const initialRow = document.createElement('tr');
-        initialRow.innerHTML = `
-            <td>0 min</td>
-            <td>Initial Bolus</td>
-            <td>-</td>
-            <td>-</td>
-            <td>Induction Administration</td>
-        `;
-        tbody.appendChild(initialRow);
-        
-        // Add continuous infusion start row
-        const infusionStartRow = document.createElement('tr');
-        infusionStartRow.innerHTML = `
-            <td>0 min</td>
-            <td>Start Continuous Infusion</td>
-            <td>-</td>
-            <td>-</td>
-            <td>Optimized Initial Infusion Rate</td>
-        `;
-        tbody.appendChild(infusionStartRow);
-        
-        // Add dosage adjustments
-        dosageAdjustments.forEach(adjustment => {
-            const row = document.createElement('tr');
-            const typeClass = adjustment.type === 'predictive_adjustment' ? 'predictive' : 'reactive';
-            row.className = typeClass;
-            row.innerHTML = `
-                <td>${adjustment.time.toFixed(1)} min</td>
-                <td>Dose Adjustment</td>
-                <td>${adjustment.oldRate.toFixed(2)} → ${adjustment.newRate.toFixed(2)} mg/kg/hr</td>
-                <td>${adjustment.ceAtEvent.toFixed(3)} μg/mL</td>
-                <td>${adjustment.reason}</td>
-            `;
-            tbody.appendChild(row);
-        });
-        
-        container.appendChild(table);
-    }
-
-    updateAllPanelStates() {
-        this.updateInductionControls();
-        this.updateMonitoringDisplay();
-    }
-
-    // Test error reporting functionality (development only)
-    addTestErrorButton() {
-        if (typeof MedicalErrorLog === 'undefined') return;
-
-        const testButton = document.createElement('button');
-        testButton.textContent = '⚠️ Test Errors';
-        testButton.className = 'btn btn-warning';
-        testButton.style.position = 'fixed';
-        testButton.style.bottom = '10px';
-        testButton.style.left = '10px';
-        testButton.style.zIndex = '9999';
-        testButton.style.fontSize = '12px';
-        testButton.style.padding = '4px 8px';
-
-        testButton.addEventListener('click', () => {
-            this.generateTestErrors();
-        });
-
-        document.body.appendChild(testButton);
-    }
-
-    generateTestErrors() {
-        if (typeof MedicalErrorLog === 'undefined') return;
-
-        // Test validation error
-        MedicalErrorLog.logValidationError(
-            ErrorSource.MAIN_CONTROLLER,
-            'Test validation error: Invalid patient age',
-            { age: 150, weight: 70, height: 170 },
-            { ageRange: '18-100 years', validationRule: 'Age bounds check' }
-        );
-
-        // Test pharmacokinetic error
-        MedicalErrorLog.logPKError(
-            ErrorSource.MASUI_KE0_CALCULATOR,
-            'Test PK calculation error: Failed to solve cubic equation',
-            { id: 'TEST_PATIENT', age: 45, weight: 70, height: 170, sex: 0, asaPS: 0 },
-            { calculationType: 'ke0 numerical solution', algorithm: 'Cubic solver' }
-        );
-
-        // Test numerical error
-        MedicalErrorLog.logNumericalError(
-            ErrorSource.LSODA_SOLVER,
-            'Test numerical integration error: Convergence failure',
-            { name: 'LSODA', parameters: { rtol: 1e-6, atol: 1e-12 } },
-            { converged: false, iterations: 500, reason: 'Max iterations exceeded' }
-        );
-
-        // Test safety error
-        MedicalErrorLog.logSafetyError(
-            ErrorSource.PROTOCOL_ENGINE,
-            'Test safety threshold violation: Target concentration too high',
-            { safeRange: '0.1-3.0 μg/mL', threshold: 'Clinical safety bounds' },
-            { targetConcentration: 5.0, calculatedDose: 25.0 }
-        );
-
-        // Test system error
-        MedicalErrorLog.logError(
-            ErrorSeverity.MEDIUM,
-            ErrorCategory.SYSTEM,
-            ErrorSource.MAIN_CONTROLLER,
-            'Test system error: Chart rendering failed',
-            {},
-            { component: 'Chart.js', error: 'Canvas context lost', fallback: 'Table display' }
-        );
-
-        console.log('Test errors generated successfully');
-        alert('Test errors have been generated. Check the Error Diagnostics panel.');
     }
 }
 
-// Initialize application when script loads
+// Initialize
 const app = new MainApplicationController();
 
-// Export for global access
 if (typeof window !== 'undefined') {
     window.app = app;
 }
