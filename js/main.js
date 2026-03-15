@@ -525,13 +525,13 @@ class MainApplicationController {
                         {
                             label: 'Cp',
                             data: this.inductionChartData.plasma,
-                            borderColor: '#1a73e8',
+                            borderColor: '#29B6F6',
                             fill: false, tension: 0.3, pointRadius: 0, borderWidth: 1.5
                         },
                         {
                             label: 'Ce',
                             data: this.inductionChartData.effect,
-                            borderColor: '#34a853',
+                            borderColor: '#4CAF50',
                             fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2
                         }
                     ]
@@ -542,12 +542,12 @@ class MainApplicationController {
                     animation: { duration: 0 },
                     interaction: { mode: 'index', intersect: false, axis: 'x' },
                     plugins: {
-                        tooltip: { events: ['click', 'touchstart'], padding: 8, cornerRadius: 6 },
-                        legend: { labels: { boxWidth: 10, font: { size: 11 } } }
+                        tooltip: { events: ['click', 'touchstart'], padding: 8, cornerRadius: 6, backgroundColor: '#333', titleColor: '#fff', bodyColor: '#ddd' },
+                        legend: { labels: { boxWidth: 10, font: { size: 11 }, color: '#a0a0a0' } }
                     },
                     scales: {
-                        x: { ticks: { maxTicksLimit: 6, font: { size: 10 } } },
-                        y: { beginAtZero: true, title: { display: true, text: '\u03BCg/mL', font: { size: 10 } } }
+                        x: { ticks: { maxTicksLimit: 6, font: { size: 10 }, color: '#a0a0a0' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                        y: { beginAtZero: true, title: { display: true, text: '\u03BCg/mL', font: { size: 10 }, color: '#a0a0a0' }, ticks: { color: '#a0a0a0' }, grid: { color: 'rgba(255,255,255,0.08)' } }
                     }
                 }
             });
@@ -724,33 +724,33 @@ class MainApplicationController {
                     {
                         label: 'Cp',
                         data: chartData.plasmaConcentrations,
-                        borderColor: '#1a73e8',
-                        backgroundColor: 'rgba(26,115,232,0.1)',
+                        borderColor: '#29B6F6',
+                        backgroundColor: 'rgba(41,182,246,0.1)',
                         fill: false, tension: 0.1, pointRadius: 0, borderWidth: 1.5
                     },
                     {
                         label: 'Ce',
                         data: chartData.effectSiteConcentrations,
-                        borderColor: '#34a853',
-                        backgroundColor: 'rgba(52,168,83,0.1)',
+                        borderColor: '#4CAF50',
+                        backgroundColor: 'rgba(76,175,80,0.1)',
                         fill: false, tension: 0.1, pointRadius: 0, borderWidth: 2
                     },
                     {
                         label: 'Target',
                         data: chartData.targetLine,
-                        borderColor: 'rgba(217,48,37,0.7)',
+                        borderColor: 'rgba(244,67,54,0.8)',
                         borderDash: [5, 5], tension: 0, pointRadius: 0, borderWidth: 1.5, fill: false
                     },
                     {
                         label: 'Upper',
                         data: chartData.upperThresholdLine,
-                        borderColor: 'rgba(234,134,0,0.5)',
+                        borderColor: 'rgba(255,193,7,0.6)',
                         borderDash: [2, 2], tension: 0, pointRadius: 0, borderWidth: 1, fill: false
                     },
                     {
                         label: 'Rate',
                         data: chartData.infusionRates,
-                        borderColor: '#7b1fa2',
+                        borderColor: '#CE93D8',
                         tension: 0.1, pointRadius: 0, borderWidth: 1.5, fill: false,
                         yAxisID: 'y1'
                     }
@@ -764,16 +764,18 @@ class MainApplicationController {
                     tooltip: {
                         events: ['click', 'touchstart'],
                         padding: 10, cornerRadius: 8,
+                        backgroundColor: '#333', titleColor: '#fff', bodyColor: '#ddd',
                         titleFont: { size: 12 }, bodyFont: { size: 11 }
                     },
-                    legend: { display: true, labels: { boxWidth: 12, font: { size: 11 } } }
+                    legend: { display: true, labels: { boxWidth: 12, font: { size: 11 }, color: '#a0a0a0' } }
                 },
                 scales: {
-                    x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
-                    y: { beginAtZero: true, title: { display: true, text: 'Conc (ug/mL)', font: { size: 10 } } },
+                    x: { ticks: { maxTicksLimit: 8, font: { size: 10 }, color: '#a0a0a0' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Conc (ug/mL)', font: { size: 10 }, color: '#a0a0a0' }, ticks: { color: '#a0a0a0' }, grid: { color: 'rgba(255,255,255,0.08)' } },
                     y1: {
                         type: 'linear', display: true, position: 'right', beginAtZero: true,
-                        title: { display: true, text: 'Rate', font: { size: 10 } },
+                        title: { display: true, text: 'Rate', font: { size: 10 }, color: '#a0a0a0' },
+                        ticks: { color: '#a0a0a0' },
                         grid: { drawOnChartArea: false }
                     }
                 }
@@ -981,13 +983,13 @@ class MainApplicationController {
                     {
                         label: 'Cp',
                         data: chartData.plasmaData,
-                        borderColor: '#1a73e8',
+                        borderColor: '#29B6F6',
                         fill: false, tension: 0.1, pointRadius: 0, borderWidth: 1.5
                     },
                     {
                         label: 'Ce',
                         data: chartData.effectData,
-                        borderColor: '#34a853',
+                        borderColor: '#4CAF50',
                         fill: false, tension: 0.1, pointRadius: 0, borderWidth: 2
                     }
                 ]
@@ -1000,13 +1002,14 @@ class MainApplicationController {
                     tooltip: {
                         events: ['click', 'touchstart'],
                         padding: 10, cornerRadius: 8,
+                        backgroundColor: '#333', titleColor: '#fff', bodyColor: '#ddd',
                         titleFont: { size: 12 }, bodyFont: { size: 11 }
                     },
-                    legend: { labels: { boxWidth: 12, font: { size: 11 } } }
+                    legend: { labels: { boxWidth: 12, font: { size: 11 }, color: '#a0a0a0' } }
                 },
                 scales: {
-                    x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
-                    y: { beginAtZero: true, title: { display: true, text: 'Conc (ug/mL)', font: { size: 10 } } }
+                    x: { ticks: { maxTicksLimit: 8, font: { size: 10 }, color: '#a0a0a0' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Conc (ug/mL)', font: { size: 10 }, color: '#a0a0a0' }, ticks: { color: '#a0a0a0' }, grid: { color: 'rgba(255,255,255,0.08)' } }
                 }
             }
         });
