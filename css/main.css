@@ -273,7 +273,7 @@ input, select, textarea {
    Header - Dark OR Style
    ============================================ */
 .app-header {
-    height: var(--header-h);
+    min-height: var(--header-h);
     padding-top: var(--sat);
     background: #111111;
     color: var(--text-bright);
@@ -288,7 +288,7 @@ input, select, textarea {
 }
 
 .header-left h1 {
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 600;
     white-space: nowrap;
     color: var(--primary);
