@@ -25,6 +25,21 @@ A Progressive Web Application for Target-Controlled Infusion (TCI) simulation of
 - **ke0 Calculation**: Masui & Hagihira (2022) regression model with 15 interaction terms
 - **iPhone-optimized PWA**: Offline capability, dark OR-monitor theme, safe-area support
 
+## Version History
+
+### V2.1 (2026-03-21)
+- **Bug Fix**: Corrected effect-site concentration (Ce) calculation in Induction Engine
+  - `getEffectSiteConcentration()` was using an incorrect simplified approximation instead of the RK4-integrated value
+  - The broken formula `Ce = Cp * (1-exp(-ke0*t)) * exp(-k10*t*0.5)` caused Ce to diverge from Cp unrealistically
+  - Fixed to use `this.rk4State.ce` computed by the coupled 4-compartment RK4 ODE solver via `dCe/dt = ke0 * (Cp - Ce)`
+  - Before fix: Cp/Ce ratio ~3.1x at 3 min; After fix: ~1.3x, converging as expected
+- OR-monitor dark theme for clinical environment
+- iPhone-optimized UI with safe-area support
+
+### V2.0
+- Seamless 3-step workflow (Induction → Protocol → Monitoring)
+- Automatic data transfer between steps
+
 ## System Requirements
 
 Modern browsers (Chrome 80+, Firefox 75+, Safari 13+, Edge 80+). Works on desktop, tablet, and mobile devices.
