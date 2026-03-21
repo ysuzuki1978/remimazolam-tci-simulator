@@ -497,24 +497,11 @@ class InductionEngine {
     }
 
     getEffectSiteConcentration() {
-        // FIXED: Use EffectSiteCalculator like other systems for consistency
-        const timeMin = this.elapsedTime / 60.0; // Convert seconds to minutes
-        const plasmaConc = this.getPlasmaConcentration();
-        
-        // Calculate effect-site concentration using external calculator
-        if (timeMin <= 0 || plasmaConc <= 0) {
-            return 0;
-        }
-        
-        // Use simplified effect-site calculation consistent with other systems
-        const ke0 = this.pkParams.ke0;
-        const timeConstant = 1.0 / ke0; // Time constant in minutes
-        const buildup = 1.0 - Math.exp(-ke0 * timeMin);
-        
-        // Approximate effect-site buildup considering plasma decay
-        const effectSite = plasmaConc * buildup * Math.exp(-this.pkParams.k10 * timeMin * 0.5);
-        
-        return Math.max(0, effectSite);
+        // Use RK4-integrated effect-site concentration directly
+        // The RK4 ODE solver correctly computes Ce via dCe/dt = ke0 * (Cp - Ce)
+        // Previous implementation used an incorrect simplified approximation
+        // that caused Cp and Ce to diverge unrealistically
+        return this.rk4State.ce;
     }
 
     // Dual-method specific getters
