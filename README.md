@@ -44,6 +44,23 @@ A Progressive Web Application for Target-Controlled Infusion (TCI) simulation of
 
 Modern browsers (Chrome 80+, Firefox 75+, Safari 13+, Edge 80+). Works on desktop, tablet, and mobile devices.
 
+## Validation — Cross-reference with Excel_PkPd Ver1.46 Lite
+
+The PK engine of this application has been cross-validated against [Excel_PkPd Ver1.46 Lite](https://home.hiroshima-u.ac.jp/r-nacamura/Excel_PkPd/Excel_PkPd146_Lite.xls), a widely adopted PK/PD simulation tool in the Japanese anesthesiology community developed by Prof. Ryuji Nakamura (Hiroshima University). Both systems implement the same Masui (2022) population PK model with RK4 numerical integration.
+
+### Validation Results
+
+| Item | Result |
+|------|--------|
+| **PK parameters** (V1, V2, V3, k10, k12, k13, k21, k31) | Identical (diff < 10⁻¹⁵) |
+| **ke0** | 0.51% difference (numerical solver implementation) |
+| **Cp/Ce over 180 min** (12 mg bolus + 1.0 mg/kg/hr) | Max deviation: Cp 0.57%, Ce 0.52% |
+| **Cp/Ce at t ≥ 15 min** | < 0.001% (virtually identical) |
+
+The small deviation observed in the first few minutes is attributable to the difference in RK4 timestep size (app: dt = 0.01 min vs. Excel: dt = 1 min), not to any difference in model implementation. When computed with an identical timestep, the deviation is exactly zero.
+
+For full details, see the [Validation Report (PDF)](Remimazolam_TCI_Validation_Report.pdf).
+
 ## Pharmacokinetic Models
 
 1. **Primary PK Model**: Masui, K., et al. (2022). Population pharmacokinetics and pharmacodynamics of remimazolam in Japanese patients undergoing general anesthesia. *J Anesth* 36:493-505.

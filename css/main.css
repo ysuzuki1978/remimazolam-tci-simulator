@@ -1,41 +1,44 @@
-/* Remimazolam TCI TIVA V2.1 - OR Monitor Dark Theme */
+/* Remimazolam TCI TIVA V2.1 - Precision Instrument Dark Theme */
 /* iPhone-optimized 3-step wizard UI */
+/* Color Vision Deficiency (CVD) accessible palette */
 
 /* ============================================
-   CSS Variables - OR Monitor Dark Palette
+   CSS Variables - Clinical Monitor Palette
+   CVD-safe: avoids red/green contrast pairs
+   Uses blue/orange axis + luminance differentiation
    ============================================ */
 :root {
-    --primary: #00BCD4;
-    --primary-dark: #0097A7;
-    --primary-light: rgba(0,188,212,0.15);
+    --primary: #0F6E56;
+    --primary-dark: #0A5240;
+    --primary-light: rgba(15,110,86,0.12);
 
-    --success: #4CAF50;
-    --success-light: rgba(76,175,80,0.15);
-    --warning: #FFC107;
-    --warning-light: rgba(255,193,7,0.15);
-    --danger: #F44336;
-    --danger-light: rgba(244,67,54,0.15);
-    --info: #29B6F6;
+    --success: #2E7D9A;
+    --success-light: rgba(46,125,154,0.15);
+    --warning: #D4A017;
+    --warning-light: rgba(212,160,23,0.12);
+    --danger: #C45B28;
+    --danger-light: rgba(196,91,40,0.12);
+    --info: #0F6E56;
 
-    --bg: #1a1a1a;
-    --bg-card: #2d2d2d;
-    --bg-surface: #3a3a3a;
-    --bg-elevated: #444444;
+    --bg: #0A0F0D;
+    --bg-card: #121A16;
+    --bg-surface: #1A2520;
+    --bg-elevated: #243029;
 
-    --text: #e0e0e0;
-    --text-secondary: #a0a0a0;
-    --text-muted: #707070;
-    --text-bright: #ffffff;
+    --text: #C8D5CE;
+    --text-secondary: #8A9B90;
+    --text-muted: #4A5B50;
+    --text-bright: #E4EDE8;
 
-    --border: #4a4a4a;
-    --border-light: #3a3a3a;
+    --border: #2A3830;
+    --border-light: #1E2B24;
     --border-radius: 12px;
     --border-radius-sm: 8px;
-    --shadow: 0 2px 8px rgba(0,0,0,0.4);
-    --shadow-lg: 0 4px 16px rgba(0,0,0,0.5);
+    --shadow: 0 2px 8px rgba(0,0,0,0.3);
+    --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
 
     --font: "Figtree", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-    --mono: "SF Mono", "Menlo", "Monaco", monospace;
+    --mono: "SF Mono", "JetBrains Mono", "Fira Code", "Menlo", monospace;
 
     --sat: env(safe-area-inset-top, 0px);
     --sar: env(safe-area-inset-right, 0px);
@@ -45,13 +48,13 @@
     --header-h: 48px;
     --step-nav-h: 44px;
 
-    /* Chart colors */
-    --chart-cp: #29B6F6;
-    --chart-ce: #4CAF50;
-    --chart-rate: #CE93D8;
-    --chart-target: #F44336;
-    --chart-upper: #FFC107;
-    --chart-grid: rgba(255,255,255,0.08);
+    /* Chart colors — CVD-safe (blue/orange axis + luminance) */
+    --chart-cp: #3266AD;
+    --chart-ce: #D4822D;
+    --chart-rate: #7B68AE;
+    --chart-target: #C45B28;
+    --chart-upper: #D4A017;
+    --chart-grid: rgba(255,255,255,0.06);
 }
 
 /* ============================================
@@ -97,7 +100,7 @@ input, select, textarea {
 .loading-screen {
     position: fixed;
     inset: 0;
-    background: #111111;
+    background: #060A08;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -275,11 +278,12 @@ input, select, textarea {
 .app-header {
     min-height: var(--header-h);
     padding-top: var(--sat);
-    background: #111111;
+    background: #060A08;
     color: var(--text-bright);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    border-top: 2px solid var(--primary);
     padding-left: max(12px, var(--sal));
     padding-right: max(12px, var(--sar));
     flex-shrink: 0;
@@ -298,7 +302,7 @@ input, select, textarea {
     font-size: 12px;
     font-weight: 400;
     opacity: 0.8;
-    background: rgba(0,188,212,0.2);
+    background: rgba(15,110,86,0.2);
     color: var(--primary);
     padding: 1px 6px;
     border-radius: 4px;
@@ -363,7 +367,7 @@ input, select, textarea {
    ============================================ */
 .step-nav {
     height: var(--step-nav-h);
-    background: #222222;
+    background: #0A0F0D;
     border-bottom: 1px solid var(--border-light);
     display: flex;
     align-items: center;
@@ -415,12 +419,12 @@ input, select, textarea {
 
 .step-tab.active .step-num {
     background: var(--primary);
-    color: #111111;
+    color: #060A08;
 }
 
 .step-tab.completed .step-num {
     background: var(--success);
-    color: #111111;
+    color: #060A08;
 }
 
 .step-label {
@@ -546,12 +550,12 @@ input, select, textarea {
 
 .stepper-btn:active {
     background: var(--primary);
-    color: #111111;
+    color: #060A08;
 }
 
 .stepper-btn.holding {
     background: var(--primary);
-    color: #111111;
+    color: #060A08;
 }
 
 .stepper-input {
@@ -638,13 +642,13 @@ input, select, textarea {
     cursor: not-allowed;
 }
 
-.btn-primary { background: var(--primary); color: #111111; font-weight: 700; }
+.btn-primary { background: var(--primary); color: #060A08; font-weight: 700; }
 .btn-primary:active:not(:disabled) { background: var(--primary-dark); }
 .btn-secondary { background: var(--bg-surface); color: var(--text); border: 1px solid var(--border); }
 .btn-danger { background: var(--danger); color: white; }
-.btn-warning { background: var(--warning); color: #111111; font-weight: 700; }
-.btn-success { background: var(--success); color: #111111; }
-.btn-info { background: var(--info); color: #111111; }
+.btn-warning { background: var(--warning); color: #060A08; font-weight: 700; }
+.btn-success { background: var(--success); color: #060A08; }
+.btn-info { background: var(--info); color: #060A08; }
 
 .btn-block { width: 100%; }
 .btn-sm { padding: 6px 14px; font-size: 13px; }
@@ -894,7 +898,7 @@ input, select, textarea {
     width: 100%;
     height: 220px;
     margin-bottom: 12px;
-    background: #1e1e1e;
+    background: #0A0F0D;
     border-radius: var(--border-radius-sm);
     border: 1px solid var(--border-light);
     padding: 4px;
@@ -995,9 +999,9 @@ input, select, textarea {
     color: var(--text);
 }
 
-.concentration-evaluation-table .low-deviation { background: rgba(76,175,80,0.2); color: var(--success); }
-.concentration-evaluation-table .medium-deviation { background: rgba(255,193,7,0.2); color: var(--warning); }
-.concentration-evaluation-table .high-deviation { background: rgba(244,67,54,0.2); color: var(--danger); }
+.concentration-evaluation-table .low-deviation { background: rgba(46,125,154,0.2); color: var(--success); }
+.concentration-evaluation-table .medium-deviation { background: rgba(212,160,23,0.2); color: var(--warning); }
+.concentration-evaluation-table .high-deviation { background: rgba(196,91,40,0.2); color: var(--danger); }
 
 .dosing-schedule-details {
     margin-bottom: 12px;
@@ -1037,12 +1041,12 @@ input, select, textarea {
 }
 
 .protocol-table .predictive {
-    background: rgba(0,188,212,0.15);
+    background: rgba(15,110,86,0.10);
     border-left: 3px solid var(--info);
 }
 
 .protocol-table .reactive {
-    background: rgba(244,67,54,0.15);
+    background: rgba(196,91,40,0.10);
     border-left: 3px solid var(--danger);
 }
 
@@ -1281,7 +1285,7 @@ input, select, textarea {
    Utility
    ============================================ */
 @keyframes valueUpdate {
-    0% { background-color: rgba(0,188,212,0.3); }
+    0% { background-color: rgba(15,110,86,0.25); }
     100% { background-color: transparent; }
 }
 
