@@ -1,4 +1,4 @@
-# Remimazolam TCI TIVA V2.1 - Target Controlled Infusion Simulator
+# Remimazolam TCI TIVA V2.2 - Target Controlled Infusion Simulator
 
 ## Overview
 
@@ -26,6 +26,10 @@ A Progressive Web Application for Target-Controlled Infusion (TCI) simulation of
 - **iPhone-optimized PWA**: Offline capability, dark OR-monitor theme, safe-area support
 
 ## Version History
+
+### V2.2 (2026-03-23)
+- **PWA Update Notification**: Non-intrusive banner notifies users when a new version is available; update applies on next launch without interrupting active sessions
+- **Service Worker Cache Sync**: Aligned SW version with app version; updated cache file list to match all loaded scripts
 
 ### V2.1 (2026-03-21)
 - **Bug Fix**: Corrected effect-site concentration (Ce) calculation in Induction Engine

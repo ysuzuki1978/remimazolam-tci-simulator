@@ -1,8 +1,8 @@
-// Service Worker for Remimazolam TCI TIVA V1.3.0
+// Service Worker for Remimazolam TCI TIVA V2.2.0
 // PWA offline functionality and caching
 
-const CACHE_NAME = 'remimazolam-tci-v1.3.0';
-const VERSION = '1.3.0';
+const CACHE_NAME = 'remimazolam-tci-v2.2.0';
+const VERSION = '2.2.0';
 
 // Files to cache for offline use
 const urlsToCache = [
@@ -10,15 +10,21 @@ const urlsToCache = [
   './index.html',
   './manifest.json',
   './css/main.css',
-  './js/main.js',
+  './js/error-logger.js',
   './js/models.js',
+  './js/pk-pd-system.js',
+  './js/numerical-solvers.js',
   './js/induction-engine.js',
   './js/protocol-engine.js',
   './js/advanced-protocol-engine.js',
+  './js/enhanced-protocol-engine.js',
   './js/monitoring-engine.js',
+  './js/error-display.js',
+  './js/main.js',
   './utils/lsoda.js',
   './utils/masui-ke0-calculator.js',
   './utils/vhac.js',
+  './test/lsoda-validation-test.js',
   // External CDN resources (cache with network fallback)
   'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js',
   'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js'
