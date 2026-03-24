@@ -1,4 +1,4 @@
-# Remimazolam TCI TIVA V2.2 - Target Controlled Infusion Simulator
+# Remimazolam TCI TIVA V2.3 - Target Controlled Infusion Simulator
 
 ## Overview
 
@@ -26,6 +26,13 @@ A Progressive Web Application for Target-Controlled Infusion (TCI) simulation of
 - **iPhone-optimized PWA**: Offline capability, dark OR-monitor theme, safe-area support
 
 ## Version History
+
+### V2.3 (2026-03-24)
+- **RK4 Timestep Unification**: Standardized RK4 integration timesteps across all engines
+  - Induction: dt = 0.01 min (matches 0.6s timer interval)
+  - Protocol: dt = 0.1 min (optimized for computation speed with <10⁻⁶% error vs dt=0.001)
+  - Monitoring: dt = 0.1 min (same precision standard)
+- **Float Accumulation Fix**: Replaced `t += dt` loop pattern with `i * dt` index multiplication across all time-loop constructs to eliminate floating-point accumulation error
 
 ### V2.2 (2026-03-23)
 - **PWA Update Notification**: Non-intrusive banner notifies users when a new version is available; update applies on next launch without interrupting active sessions

@@ -75,7 +75,7 @@ class MonitoringEngine {
         this.doseEvents = [];
         this.lastSimulationResult = null;
         this.calculationMethod = 'RK4 Engine (High Precision)';
-        this.precision = 0.01; // 0.01-minute high precision
+        this.precision = 0.1; // 0.1-minute time step
     }
 
     setPatient(patient) {
@@ -175,11 +175,12 @@ class MonitoringEngine {
         const maxEventTime = Math.max(...this.doseEvents.map(event => event.timeInMinutes));
         const finalDuration = simulationDurationMin || (maxEventTime + 120.0);
 
-        // Create high-precision time sequence
+        // Create time sequence
         const timeStep = this.precision;
+        const numSteps = Math.round(finalDuration / timeStep);
         const times = [];
-        for (let t = 0; t <= finalDuration; t += timeStep) {
-            times.push(t);
+        for (let i = 0; i <= numSteps; i++) {
+            times.push(i * timeStep);
         }
 
         // Calculate plasma concentrations using selected numerical method
@@ -697,9 +698,10 @@ class MonitoringEngine {
      */
     generateTimePoints(durationMin) {
         const timeStep = 0.5; // 0.5 minute intervals
+        const numSteps = Math.round(durationMin / timeStep);
         const times = [];
-        for (let t = 0; t <= durationMin; t += timeStep) {
-            times.push(t);
+        for (let i = 0; i <= numSteps; i++) {
+            times.push(i * timeStep);
         }
         return times;
     }
@@ -780,9 +782,10 @@ class MonitoringEngine {
                 console.log(`Using timeStep ${timeStep} for method ${method}`);
                 
                 const simulationDuration = this.simulationDuration || 240;
+                const numSteps = Math.round(simulationDuration / timeStep);
                 const times = [];
-                for (let t = 0; t <= simulationDuration; t += timeStep) {
-                    times.push(t);
+                for (let i = 0; i <= numSteps; i++) {
+                    times.push(i * timeStep);
                 }
                 
                 // Temporarily change calculation method for this specific simulation
