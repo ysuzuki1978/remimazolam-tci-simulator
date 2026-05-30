@@ -685,12 +685,12 @@ class MonitoringEngine {
         };
     }
 
-    exportToCSV() {
+    exportToCSV(locCe = null) {
         if (!this.lastSimulationResult) {
             throw new Error('No simulation result available for export');
         }
-        
-        return this.lastSimulationResult.toCSV();
+
+        return this.lastSimulationResult.toCSV(locCe);
     }
 
     /**
